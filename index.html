@@ -1,13 +1,92 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Panda3D WebGL Demos</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Panda3D WebGL Demos</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.container {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  padding: 30px 40px;
+  border-radius: 16px;
+  text-align: center;
+  width: 260px;
+  transition: 0.3s ease;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.card h2 {
+  margin-top: 0;
+}
+
+.button {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 12px 24px;
+  background: #00c6ff;
+  background: linear-gradient(90deg, #00c6ff, #0072ff);
+  border-radius: 8px;
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.button:hover {
+  opacity: 0.85;
+}
+</style>
 </head>
+
 <body>
-  <h1>Panda3D WebGL Demos</h1>
-  <ul>
-    <li><a href="editor/editor.html">Editor Demo</a></li>
-    <li><a href="roaming-ralph/roaming-ralph.html">Roaming Ralph Demo</a></li>
-  </ul>
+
+<h1>Panda3D WebGL Demos</h1>
+
+<div class="container">
+  <div class="card">
+    <h2>Editor Demo</h2>
+    <p>Interactive WebGL editor running Panda3D in the browser.</p>
+    <a class="button" href="editor/editor.html">Launch Editor</a>
+  </div>
+
+  <div class="card">
+    <h2>Roaming Ralph</h2>
+    <p>Classic Panda3D sample ported to WebAssembly.</p>
+    <a class="button" href="roaming-ralph/roaming-ralph.html">Launch Demo</a>
+  </div>
+</div>
+
 </body>
 </html>

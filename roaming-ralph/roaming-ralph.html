@@ -1,195 +1,183 @@
-<!doctypehtml>
-<html lang=en-us>
-
+<!doctype html>
+<html lang="en-us">
 <head>
-    <meta charset=utf-8>
-    <meta content="text/html; charset=utf-8" http-equiv=Content-Type>
-    <title>Roaming Ralph</title>
-    <style>
-    body {
-        font-family: arial;
-        margin: 0;
-        padding: none
-    }
+<meta charset="utf-8">
+<title>Roaming Ralph</title>
 
-    .emscripten {
-        padding-right: 0;
-        margin-left: auto;
-        margin-right: auto;
-        display: block
-    }
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
 
-    div.emscripten {
-        text-align: center
-    }
+<style>
+body {
+  background: #181818;
+  font-family: Roboto, sans-serif;
+  color: #eee;
+  margin: 0;
+  overflow: hidden;
+}
 
-    div.emscripten_border {
-        border: 1px solid #000
-    }
+/* Top Header */
+#header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background-color: #111;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  font-size: 14pt;
+}
 
-    canvas.emscripten {
-        border: 0 none;
-        background-color: #000
-    }
+#header button {
+  margin-left: auto;
+  background-color: #39f;
+  border: none;
+  color: white;
+  font-weight: bold;
+  padding: 6px 14px;
+  font-family: Roboto, sans-serif;
+}
 
-    #emscripten_logo {
-        display: inline-block;
-        margin: 0
-    }
+#header button:hover {
+  background-color: #4af;
+  cursor: pointer;
+}
 
-    .spinner {
-        height: 30px;
-        width: 30px;
-        margin: 0;
-        margin-top: 20px;
-        margin-left: 20px;
-        display: inline-block;
-        vertical-align: top;
-        -webkit-animation: rotation .8s linear infinite;
-        -moz-animation: rotation .8s linear infinite;
-        -o-animation: rotation .8s linear infinite;
-        animation: rotation .8s linear infinite;
-        border-left: 5px solid #ebebeb;
-        border-right: 5px solid #ebebeb;
-        border-bottom: 5px solid #ebebeb;
-        border-top: 5px solid #787878;
-        border-radius: 100%;
-        background-color: #bdd72e
-    }
+/* Main Layout */
+#main {
+  position: absolute;
+  top: 50px;
+  bottom: 30px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
 
-    @-webkit-keyframes rotation {
-        from {
-            -webkit-transform: rotate(0)
-        }
-        to {
-            -webkit-transform: rotate(360deg)
-        }
-    }
+#canvas-container {
+  border: 1px solid #333;
+  background: black;
+}
 
-    @-moz-keyframes rotation {
-        from {
-            -moz-transform: rotate(0)
-        }
-        to {
-            -moz-transform: rotate(360deg)
-        }
-    }
+/* Loading UI */
+#loader {
+  position: absolute;
+  top: 70px;
+  left: 20px;
+  font-size: 10pt;
+}
 
-    @-o-keyframes rotation {
-        from {
-            -o-transform: rotate(0)
-        }
-        to {
-            -o-transform: rotate(360deg)
-        }
-    }
+.spinner {
+  height: 20px;
+  width: 20px;
+  display: inline-block;
+  vertical-align: middle;
+  animation: rotation .8s linear infinite;
+  border-left: 3px solid #555;
+  border-right: 3px solid #555;
+  border-bottom: 3px solid #555;
+  border-top: 3px solid #39f;
+  border-radius: 100%;
+  margin-right: 10px;
+}
 
-    @keyframes rotation {
-        from {
-            transform: rotate(0)
-        }
-        to {
-            transform: rotate(360deg)
-        }
-    }
+@keyframes rotation {
+  from { transform: rotate(0) }
+  to { transform: rotate(360deg) }
+}
 
-    #status {
-        display: inline-block;
-        vertical-align: top;
-        margin-top: 30px;
-        margin-left: 20px;
-        font-weight: 700;
-        color: #787878
-    }
+#progress {
+  width: 200px;
+  height: 8px;
+}
 
-    #progress {
-        height: 20px;
-        width: 300px
-    }
+/* Footer */
+#footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background-color: #111;
+  padding: 5px 15px;
+  font-size: 10pt;
+}
 
-    #controls {
-        display: inline-block;
-        float: right;
-        vertical-align: top;
-        margin-top: 30px;
-        margin-right: 20px
-    }
-
-    #output {
-        width: 100%;
-        height: 200px;
-        margin: 0 auto;
-        margin-top: 10px;
-        border-left: 0;
-        border-right: 0;
-        padding-left: 0;
-        padding-right: 0;
-        display: block;
-        background-color: #000;
-        color: #fff;
-        font-family: 'Lucida Console', Monaco, monospace;
-        outline: 0
-    }
-    </style>
+a { color: #eee; text-decoration: none; }
+a:hover { text-decoration: underline; }
+</style>
 </head>
 
 <body>
-    <div class=spinner id=spinner></div>
-    <div class=emscripten id=status>Downloading...</div><span id=controls><span><input type=checkbox id=resize>Resize canvas</span><span><input type=checkbox id=pointerLock checked>Lock/hide mouse pointer    </span><span><input type=button onclick='Module.requestFullscreen(document.getElementById("pointerLock").checked,document.getElementById("resize").checked)'value=Fullscreen></span></span>
-    <div class=emscripten>
-        <progress hidden id=progress max=100 value=0></progress>
-    </div>
-    <div class=emscripten_border>
-        <canvas class=emscripten id=canvas oncontextmenu=event.preventDefault() tabindex=-1></canvas>
-    </div>
-    <textarea id=output rows=8></textarea>
-    <script>
-    var statusElement = document.getElementById("status"),
-        progressElement = document.getElementById("progress"),
-        spinnerElement = document.getElementById("spinner"),
-        Module = {
-            preRun: [],
-            postRun: [],
-            print: function() {
-                var e = document.getElementById("output");
-                return e && (e.value = ""),
-                    function(t) {
-                        arguments.length > 1 && (t = Array.prototype.slice.call(arguments).join(" ")), console.log(t), e && (e.value += t + "\n", e.scrollTop = e.scrollHeight)
-                    }
-            }(),
-            printErr: function(e) {
-                arguments.length > 1 && (e = Array.prototype.slice.call(arguments).join(" ")), console.error(e)
-            },
-            canvas: function() {
-                var canvas = document.getElementById('canvas');
-                canvas.contentEditable = true;
-                canvas.setAttribute("tabindex", "0");
-                // Focus the canvas when the mouse enters it.
-                canvas.addEventListener('mouseenter',function() {canvas.focus();},false);
-                return canvas;
-            }(),
-            setStatus: function(e) {
-                if(Module.setStatus.last || (Module.setStatus.last = {
-                        time: Date.now(),
-                        text: ""
-                    }), e !== Module.setStatus.last.text) {
-                    var t = e.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/),
-                        n = Date.now();
-                    t && n - Module.setStatus.last.time < 30 || (Module.setStatus.last.time = n, Module.setStatus.last.text = e, t ? (e = t[1], progressElement.value = 100 * parseInt(t[2]), progressElement.max = 100 * parseInt(t[4]), progressElement.hidden = !1, spinnerElement.hidden = !1) : (progressElement.value = null, progressElement.max = null, progressElement.hidden = !0, e || (spinnerElement.style.display = "none")), statusElement.innerHTML = e)
-                }
-            },
-            totalDependencies: 0,
-            monitorRunDependencies: function(e) {
-                this.totalDependencies = Math.max(this.totalDependencies, e), Module.setStatus(e ? "Preparing... (" + (this.totalDependencies - e) + "/" + this.totalDependencies + ")" : "All downloads complete.")
-            }
-        };
-    Module.setStatus("Downloading..."), window.onerror = function(e) {
-        Module.setStatus("Exception thrown, see JavaScript console"), spinnerElement.style.display = "none", Module.setStatus = function(e) {
-            e && Module.printErr("[post-exception status] " + e)
-        }
-    }
-    </script>
-    <script async src="roaming-ralph.js"></script>
-</body>
 
+<div id="header">
+  <i class="fa fa-gamepad"></i>&nbsp;&nbsp;
+  Roaming Ralph (WebAssembly Build)
+  <button onclick="location.href='../index.html'">
+    <i class="fa fa-arrow-left"></i> Back
+  </button>
+</div>
+
+<div id="loader">
+  <div class="spinner" id="spinner"></div>
+  <span id="status">Downloading...</span>
+  <br>
+  <progress hidden id="progress" max="100" value="0"></progress>
+</div>
+
+<div id="main">
+  <div id="canvas-container">
+    <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+  </div>
+</div>
+
+<div id="footer">
+  Powered by Panda3D + Emscripten + WebAssembly
+</div>
+
+<script>
+var statusElement = document.getElementById("status"),
+    progressElement = document.getElementById("progress"),
+    spinnerElement = document.getElementById("spinner");
+
+var Module = {
+  preRun: [],
+  postRun: [],
+  canvas: (function() {
+    var canvas = document.getElementById('canvas');
+    canvas.addEventListener('mouseenter', function() { canvas.focus(); }, false);
+    return canvas;
+  })(),
+  setStatus: function(text) {
+    var m = text.match(/([^(]+)\((\d+(\.\d+)?)\/(\d+)\)/);
+    if (m) {
+      progressElement.hidden = false;
+      spinnerElement.style.display = "inline-block";
+      progressElement.value = 100 * parseInt(m[2]);
+      progressElement.max = 100 * parseInt(m[4]);
+      statusElement.innerHTML = m[1];
+    } else {
+      progressElement.hidden = true;
+      if (!text) spinnerElement.style.display = "none";
+      statusElement.innerHTML = text;
+    }
+  },
+  monitorRunDependencies: function(left) {
+    this.totalDependencies = Math.max(this.totalDependencies || 0, left);
+    Module.setStatus(left ?
+      "Preparing... (" + (this.totalDependencies - left) + "/" + this.totalDependencies + ")" :
+      "All downloads complete.");
+  }
+};
+
+Module.setStatus("Downloading...");
+</script>
+
+<script async src="roaming-ralph.js"></script>
+
+</body>
 </html>
