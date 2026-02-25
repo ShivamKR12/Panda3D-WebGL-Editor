@@ -8,3 +8,9 @@ rm -rf panda3d-webgl
 wget https://rdb.name/webgl-editor-and-dependencies.zip
 unzip webgl-editor-and-dependencies.zip
 rm webgl-editor-and-dependencies.zip
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk
+./emsdk install latest
+./emsdk activate latest
+source ./emsdk_env.sh
+emcc -v
