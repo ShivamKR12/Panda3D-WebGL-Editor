@@ -5,3 +5,6 @@ pip install -U --pre --extra-index-url https://archive.panda3d.org/ panda3d
 git clone https://github.com/panda3d/panda3d.git panda3d-webgl
 mv panda3d-webgl/* .
 rm -rf panda3d-webgl
+wget https://rdb.name/webgl-editor-and-dependencies.zip
+unzip webgl-editor-and-dependencies.zip
+rm webgl-editor-and-dependencies.zip
