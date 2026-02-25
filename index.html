@@ -1,91 +1,135 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Panda3D WebGL Demos</title>
+  <title>Panda3D WebGL Demos</title>
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
 
-<style>
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-}
+  <style>
+    body {
+      background: #181818;
+      font-family: Roboto, sans-serif;
+      color: #eee;
+      margin: 0;
+      overflow: hidden;
+    }
 
-h1 {
-  font-size: 2.5rem;
-  margin-bottom: 40px;
-  text-align: center;
-}
+    #header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      background-color: #111;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      font-size: 14pt;
+    }
 
-.container {
-  display: flex;
-  gap: 40px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
+    #main {
+      position: absolute;
+      top: 50px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 60px;
+    }
 
-.card {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  padding: 30px 40px;
-  border-radius: 16px;
-  text-align: center;
-  width: 260px;
-  transition: 0.3s ease;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
-}
+    .card {
+      background: #222;
+      border: 1px solid #333;
+      width: 320px;
+      padding: 40px;
+      text-align: center;
+      transition: 0.2s ease;
+    }
 
-.card:hover {
-  transform: translateY(-8px);
-  background: rgba(255, 255, 255, 0.15);
-}
+    .card:hover {
+      background: #252525;
+      border-color: #39f;
+    }
 
-.card h2 {
-  margin-top: 0;
-}
+    .card h2 {
+      margin-top: 0;
+      font-weight: normal;
+    }
 
-.button {
-  display: inline-block;
-  margin-top: 20px;
-  padding: 12px 24px;
-  background: #00c6ff;
-  background: linear-gradient(90deg, #00c6ff, #0072ff);
-  border-radius: 8px;
-  color: white;
-  text-decoration: none;
-  font-weight: bold;
-  transition: 0.3s;
-}
+    button {
+      width: 200px;
+      background-color: #39f;
+      border: none;
+      font-weight: bold;
+      color: white;
+      padding: 10px;
+      margin-top: 20px;
+      font-family: Roboto, sans-serif;
+      font-size: 11pt;
+    }
 
-.button:hover {
-  opacity: 0.85;
-}
-</style>
+    button:hover {
+      background-color: #4af;
+      cursor: pointer;
+    }
+
+    #credits {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 30px;
+      background-color: #111;
+      text-align: left;
+      padding: 5px 15px;
+      font-size: 10pt;
+    }
+
+    a {
+      color: #eee;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 
 <body>
 
-<h1>Panda3D WebGL Demos</h1>
+<div id="header">
+  <i class="fa fa-cube"></i>&nbsp;&nbsp;
+  Panda3D WebGL Demo Launcher
+</div>
 
-<div class="container">
+<div id="main">
+
   <div class="card">
-    <h2>Editor Demo</h2>
-    <p>Interactive WebGL editor running Panda3D in the browser.</p>
-    <a class="button" href="editor/editor.html">Launch Editor</a>
+    <h2><i class="fa fa-code"></i> Live Editor</h2>
+    <p>Interactive Panda3D Python editor running in WebAssembly.</p>
+    <button onclick="location.href='editor/editor.html'">
+      <i class="fa fa-play"></i> Launch Editor
+    </button>
   </div>
 
   <div class="card">
-    <h2>Roaming Ralph</h2>
-    <p>Classic Panda3D sample ported to WebAssembly.</p>
-    <a class="button" href="roaming-ralph/roaming-ralph.html">Launch Demo</a>
+    <h2><i class="fa fa-gamepad"></i> Roaming Ralph</h2>
+    <p>Classic Panda3D demo compiled for the browser.</p>
+    <button onclick="location.href='roaming-ralph/roaming-ralph.html'">
+      <i class="fa fa-play"></i> Launch Demo
+    </button>
   </div>
+
+</div>
+
+<div id="credits">
+  Powered by 
+  <a href="https://www.panda3d.org/" target="_blank">Panda3D</a>, 
+  <a href="https://emscripten.org/" target="_blank">Emscripten</a> 
+  and WebAssembly
 </div>
 
 </body>
