@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+
+<head>
+<title>Panda3D WebGL Simple FPS Demo</title>
+<link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Roboto" />
+<style type="text/css">
+body {
+	background: #181818;
+	font-family: Roboto, sans-serif;
+	color: #eee;
+	margin: 0px;
+	padding: 0px;
+}
+
+html {
+	height:100%;
+	margin: 0px;
+	padding: 0px;}
+	
+div#main {
+	display: block;}
+	
+img#logo {
+	margin-top: 15%;}
+	
+span#ldtext {
+	display: block;
+	font-size: 13pt;
+	margin-top: 80px;
+}
+
+span#credits {
+	position:fixed;
+	left: 0;
+	bottom: 0;
+	padding: 10px;
+	background-color: #111;
+	width:100%;
+	text-align: left;
+	font-size: 10pt;}
+
+a {
+  color: #eee;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #eee;
+  text-decoration: underline;
+}
+
+/*~/panda3d-git/built_rdb_rt/bin/panda3d -u file:///home/rdb/panda3d-git/built_rdb/stage -t splash_img='file:///tmp/logo.png' -t bar_bgcolor='#333' -t bar_height=11 -t bar_bottom=50 -t barcolor='#39f' -t bgcolor='#181818' -t fgcolor='#eee' -t bar_border=0 -s 640,480 ~/Downloads/dataroll19.p3d */
+
+div#ldbar-outer {
+	background-color: #333;
+	margin-top: 15px;
+	height: 11px;
+	width: 400px;
+	text-align: left;
+}
+
+div#ldbar {
+	background-color: #39f;
+	width:0%;
+	height:100%;
+}
+</style>
+</head>
+
+<body>
+<center>
+<div id="main">
+<div id="ld">
+<img id="logo" src="logo.png" alt="[logo]">
+<span id="ldtext">Uh, you have JavaScript disabled. This application won't work.</span>
+<script type="text/javascript">var ldtext = document.getElementById("ldtext");ldtext.innerHTML="Checking browser compatibility...";</script>
+<div id="ldbar-outer"><div id="ldbar"></div></div>
+</div>
+<canvas id="canvas" style="display:none;" oncontextmenu="event.preventDefault()"></canvas>
+<span id="credits">Powered by <a href="https://www.panda3d.org/" target="_blank">Panda3D</a> and <a href="https://kripken.github.io/emscripten-site/" target="_blank">Emscripten</a></span>
+<script type="text/javascript">
+// The URL of the asm.js resource to load.
+var EMSCRIPTEN_ASM = 'simple_fps.js';
+// The uncompressed size of that resource (in bytes).
+var ASM_SIZE = 24506366;
+
+var ldtext = document.getElementById("ldtext");
+var ldbar = document.getElementById("ldbar");
+var ld = document.getElementById("ld");
+var canvas = document.getElementById("canvas");
+
+var Module = {
+  preRun: [],
+  postRun: [],
+  canvas: (function() {
+    return document.getElementById('canvas');
+  })(),
+  setStatus: function(text) {
+    if (text === 'Done!') {
+      ld.style.display = "none";
+      canvas.style.display = "block";
+    }
+    if (text.indexOf("Downloading data... (") === 0) {
+      ldtext.innerHTML = 'Downloading data...';
+      var parts = text.substring(21, text.length - 1).split('/');
+      var percentComplete = (parseInt(parts[0]) / parseInt(parts[1])) * 100
+      ldbar.style.width = percentComplete + '%';
+    } else {
+      ldtext.innerHTML = text;
+    }
+  },
+  totalDependencies: 0,
+  monitorRunDependencies: function(left) {
+    this.totalDependencies = Math.max(this.totalDependencies, left);
+    var percentComplete = ((this.totalDependencies-left) / this.totalDependencies)*100;
+    ldbar.style.width = percentComplete + '%';
+  },
+};
+
+var memoryInitializer = 'simple_fps.html.mem';
+if (typeof Module['locateFile'] === 'function') {
+  memoryInitializer = Module['locateFile'](memoryInitializer);
+} else if (Module['memoryInitializerPrefixURL']) {
+  memoryInitializer = Module['memoryInitializerPrefixURL'] + memoryInitializer;
+}
+var xhr = Module['memoryInitializerRequest'] = new XMLHttpRequest();
+xhr.open('GET', memoryInitializer, true);
+xhr.responseType = 'arraybuffer';
+xhr.send(null);
+
+function updateProgress(evt) {
+    var percentComplete = (evt.loaded / ASM_SIZE)*100;
+    ldbar.style.width = percentComplete + '%';
+}
+function sendreq() {
+    ldtext.innerHTML = "Downloading application...";
+
+    var req = new XMLHttpRequest();
+    req.onprogress=updateProgress;
+    req.open('GET', EMSCRIPTEN_ASM, true);
+
+    req.onreadystatechange = function (aEvt) {
+        if (req.readyState == 4)
+        {
+          Module.setStatus("Loading...");
+          setTimeout(function() {
+            var blob = new Blob([req.responseText], {type: 'text/javascript'});
+            var script = document.createElement("script");
+            script.type = "text/javascript";
+            script.async = true;
+            script.defer = true;
+            script.src = URL.createObjectURL(blob);
+            //script.text = req.responseText;
+            document.body.appendChild(script);
+
+          }, 0);
+        }
+    };
+    req.send();
+}
+window.onload = function() {
+    try {
+        gl = canvas.getContext("experimental-webgl") || canvas.getContext("webgl");
+    } catch (x) {
+        gl = null;
+    }
+    if (gl) {
+        ldbar.style.display = "block";
+        sendreq();
+    } else {
+        ldtext.innerHTML = "WebGL support is required by this application.";
+    }
+}
+window.onerror = function(event) {
+  // TODO: do not warn on ok events like simulating an infinite loop or exitStatus
+  ldtext.innerHTML = 'Exception thrown, see JavaScript console';
+};
+</script>
+</div>
+</center>
+</body>
+
+</html>
