@@ -1,0 +1,7 @@
+clear
+git --version ( download git if not available )
+python --version ( must be python 3.12 ( download if not available ) )
+pip install -U --pre --extra-index-url https://archive.panda3d.org/ panda3d
+git clone https://github.com/panda3d/panda3d.git panda3d-webgl
+mv panda3d-webgl/* .
+rm -rf panda3d-webgl
