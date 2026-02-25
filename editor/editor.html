@@ -9,127 +9,118 @@
       background: #181818;
       font-family: Roboto, sans-serif;
       color: #eee;
-      margin: 0px;
-      padding: 0px;
-      overflow: hidden;
+      margin: 0;
+      padding: 0;
+      
+      /* 1. Force the browser to allow both vertical and horizontal scrolling */
+      overflow: auto; 
+
+      /* 2. Setup the Grid Layout */
+      display: grid;
+      grid-template-areas: 
+        "header header"
+        "output input"
+        "credits credits";
+      
+      /* CRITICAL FIX FOR OVERLAPPING:
+         Left column is EXACTLY 800px (Panda3D's native canvas size).
+         Right column takes the remaining space, but never less than 500px.
+      */
+      grid-template-columns: 800px minmax(500px, 1fr); 
+      grid-template-rows: auto 1fr auto;
+      
+      min-height: 100vh;
+      /* 800 + 500 = 1300. Enforces horizontal scroll on phones and small desktops! */
+      min-width: 1300px; 
     }
-    html {
-      height: 100%;
-      margin: 0px;
-      padding: 0px;
-    }
-    div#main {
-      display: block;
-    }
-    img#logo {
-      margin-top: 15%;
-    }
-    span#ldtext {
-      display: block;
-      font-size: 13pt;
-      margin-top: 80px;
-    }
-    div#credits {
-      position: fixed;
-      clear: both;
-      left: 0;
-      bottom: 0;
-      padding: 10px;
-      height: 15px;
+
+    html { height: 100%; margin: 0; padding: 0; }
+
+    /* --- Top Toolbar --- */
+    #header {
+      grid-area: header;
       background-color: #111;
+      display: flex;
+      align-items: center;
+      padding: 5px 10px;
+      min-height: 50px;
+    }
+    
+    #toolbar {
+      display: flex;
+      flex-grow: 1;
+    }
+
+    /* --- Left Panel (Canvas + Console) --- */
+    #panel-output {
+      grid-area: output;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #333;
+      background-color: #181818;
+    }
+
+    #main {
+      width: 800px;
+      height: 600px; /* Panda3D default height */
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    canvas#canvas {
       width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #console {
+      /* Overrides Ace Editor's injected CSS that covers the screen */
+      position: relative !important; 
+      flex-grow: 1;
+      min-height: 250px;
+      padding: 10px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      user-select: text;
+      background-color: #151515;
+    }
+
+    /* --- Right Panel (Code Editor) --- */
+    #panel-input {
+      grid-area: input;
+      position: relative; /* Context so the absolute editor stays strictly inside */
+      background-color: #272822; /* Matches Ace Monokai */
+    }
+
+    #editor {
+      /* Pinned firmly inside #panel-input */
+      position: absolute !important;
+      top: 0; bottom: 0; left: 0; right: 0;
+      margin: 0;
+    }
+
+    /* --- Bottom Credits --- */
+    #credits {
+      grid-area: credits;
+      padding: 10px;
+      background-color: #111;
       text-align: left;
       font-size: 10pt;
     }
-    a {
-      color: #eee;
-      text-decoration: none;
-    }
-    a:hover {
-      color: #eee;
-      text-decoration: underline;
-    }
-    div#ldbar-outer {
-      display: inline-block;
-      background-color: #333;
-      margin-top: 15px;
-      height: 11px;
-      width: 400px;
-      text-align: left;
-    }
-    div#ldbar {
-      background-color: #39f;
-      width: 0%;
-      height: 100%;
-    }
-    div#header {
-      position: absolute;
-      top: 0px;
-      left: 0px;
-      height: 50px;
-      right: 0px;
-      background-color: #111;
-    }
-    div#toolbar {
-      position: absolute;
-      top: 0px;
-      left: 800px;
-      bottom: 50px;
-      right: 0px;
-    }
-    i.fa.fa-chevron-down {
-      float: right;
-    }
-    div#panel-input {
-      margin: 0;
-      position: absolute;
-      top: 50px;
-      bottom: 35px;
-      right: 0;
-      left: 800px;
-    }
-    div#panel-output {
-      margin: 0;
-      position: absolute;
-      top: 50px;
-      bottom: 35px;
-      left: 0;
-      width: 800px;
-      text-align: center;
-    }
-    #editor {
-      margin: 0;
-      position: absolute;
-      left: 0px;
-      top: 0px;
-      bottom: 0px;
-      right: 0px;
-    }
-    #console {
-      padding: 3px;
-      text-align: left;
-      margin: 0;
-      position: absolute;
-      top: 600px;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      overflow-y: scroll;
-      -moz-user-select: text;
-      -khtml-user-select: text;
-      -webkit-user-select: text;
-      -ms-user-select: text;
-      user-select: text;
-    }
-    #console {
-      white-space: pre-wrap;
-    }
-    #console .warning {
-      color: gold;
-    }
-    #console .error {
-      color: red;
-    }
+
+    /* --- Visual Aesthetics (Buttons, Text, etc) --- */
+    img#logo { margin-top: 15%; display: block; margin-left: auto; margin-right: auto; }
+    span#ldtext { display: block; font-size: 13pt; margin-top: 80px; text-align: center; }
+    
+    a { color: #eee; text-decoration: none; }
+    a:hover { color: #eee; text-decoration: underline; }
+    
+    div#ldbar-outer { display: block; background-color: #333; margin: 15px auto 0 auto; height: 11px; width: 80%; max-width: 400px; text-align: left; }
+    div#ldbar { background-color: #39f; width: 0%; height: 100%; }
+
+    #console .warning { color: gold; }
+    #console .error { color: red; }
+
     button, .dropdown-content a {
       width: 150px;
       background-color: #39f;
@@ -141,23 +132,14 @@
       margin: 7px;
       font-family: Roboto, sans-serif;
     }
-    button:hover {
-      background-color: #4af;
-      cursor: pointer;
-    }
-    button:active {
-      background-color: #28e;
-    }
-    button:disabled {
-      background-color: #bbb;
-    }
-    .dropdown:hover > button, .dropdown:active > button {
-      background-color: #28e;
-    }
-    .dropdown {
-      position: relative;
-      display: inline-block;
-    }
+
+    button:hover { background-color: #4af; cursor: pointer; }
+    button:active { background-color: #28e; }
+    button:disabled { background-color: #bbb; }
+
+    .dropdown { position: relative; display: inline-block; }
+    .dropdown:hover > button, .dropdown:active > button { background-color: #28e; }
+    
     .dropdown-content {
         display: none;
         position: absolute;
@@ -167,21 +149,8 @@
         min-width: 150px;
         z-index: 10;
     }
-    .dropdown-content button {
-      text-align: left;
-      margin: 3px 0px;
-    }
-    .dropdown:hover .dropdown-content {
-      display: block;
-    }
-
-    div#main {
-      position: absolute;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      left: 0;
-    }
+    .dropdown-content button { text-align: left; margin: 3px 0px; }
+    .dropdown:hover .dropdown-content { display: block; }
   </style>
   <script type="text/javascript">
     function runCode() {
