@@ -1,51 +1,59 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panda3D WebGL Demos</title>
+
   <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
 
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       background: #181818;
       font-family: Roboto, sans-serif;
       color: #eee;
       margin: 0;
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
 
+    /* HEADER */
     #header {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 50px;
       background-color: #111;
+      padding: 15px 20px;
+      font-size: 16pt;
       display: flex;
       align-items: center;
-      padding: 0 20px;
-      font-size: 14pt;
+      flex-shrink: 0;
     }
 
+    /* MAIN AREA */
     #main {
-      position: absolute;
-      top: 50px;
-      bottom: 0;
-      left: 0;
-      right: 0;
+      flex: 1;
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 60px;
+      gap: 40px;
+      padding: 40px 20px;
+      flex-wrap: wrap; /* KEY for mobile */
     }
 
+    /* CARD */
     .card {
       background: #222;
       border: 1px solid #333;
       width: 320px;
+      max-width: 100%;
       padding: 40px;
       text-align: center;
       transition: 0.2s ease;
+      border-radius: 8px;
     }
 
     .card:hover {
@@ -58,16 +66,20 @@
       font-weight: normal;
     }
 
+    /* BUTTON */
     button {
-      width: 200px;
+      width: 100%;
+      max-width: 220px;
       background-color: #39f;
       border: none;
       font-weight: bold;
       color: white;
-      padding: 10px;
+      padding: 12px;
       margin-top: 20px;
       font-family: Roboto, sans-serif;
       font-size: 11pt;
+      border-radius: 4px;
+      transition: 0.2s ease;
     }
 
     button:hover {
@@ -75,16 +87,12 @@
       cursor: pointer;
     }
 
+    /* FOOTER */
     #credits {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 30px;
       background-color: #111;
-      text-align: left;
-      padding: 5px 15px;
+      padding: 10px 15px;
       font-size: 10pt;
+      flex-shrink: 0;
     }
 
     a {
@@ -94,6 +102,24 @@
 
     a:hover {
       text-decoration: underline;
+    }
+
+    /* MOBILE ADJUSTMENTS */
+    @media (max-width: 768px) {
+      #main {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 30px 15px;
+      }
+
+      .card {
+        width: 100%;
+        padding: 30px 20px;
+      }
+
+      #header {
+        font-size: 14pt;
+      }
     }
   </style>
 </head>
