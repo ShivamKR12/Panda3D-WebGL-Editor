@@ -1,16 +1,45 @@
 clear
+
 git --version ( download git if not available )
 python --version ( must be python 3.12 ( download if not available ) )
+
 pip install -U --pre --extra-index-url https://archive.panda3d.org/ panda3d
+
 git clone https://github.com/panda3d/panda3d.git panda3d-webgl
 mv panda3d-webgl/* .
 rm -rf panda3d-webgl
+
 wget https://rdb.name/webgl-editor-and-dependencies.zip
 unzip webgl-editor-and-dependencies.zip
 rm webgl-editor-and-dependencies.zip
+
 git clone https://github.com/emscripten-core/emsdk.git
 cd emsdk
 ./emsdk install latest
 ./emsdk activate latest
 source ./emsdk_env.sh
 emcc -v
+echo 'source /workspaces/Panda3D-WebGL-Editor/emsdk/emsdk_env.sh' >> ~/.bashrc
+source ~/.bashrc
+emcc -v
+cd ..
+
+python3.12 makepanda/makepanda.py --nothing --use-python --use-vorbis --use-bullet --use-zlib --use-freetype --use-harfbuzz --use-openal --no-png --use-direct --use-gles2 --optimize 4 --static --target emscripten --threads 4
+
+cd editor
+( change the thirdparty dir and the panda built dir to the correct PATHS )
+python3.12 -OO freezify.py
+( choose either the python server or the npm server )
+python -m http.server
+npm install -g http-server
+http-server
+cd ..
+
+cd roaming-ralph
+( change the thirdparty dir and the panda built dir to the correct PATHS )
+python3.12 -OO freezify.py
+( choose either the python server or the npm server )
+python -m http.server
+npm install -g http-server
+http-server
+cd ..

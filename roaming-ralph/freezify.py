@@ -5,7 +5,7 @@ if sys.version_info[:2] != (3, 12):
     sys.exit("Run this with Python 3.12, or edit this script")
 
 # Thirdparty libraries
-THIRDPARTY_DIR = "/home/rdb/panda3d/thirdparty/emscripten-libs"
+THIRDPARTY_DIR = "/workspaces/Panda3D-WebGL-Editor/thirdparty/emscripten-libs"
 
 # Python built for target
 PY_INCLUDE_DIR = THIRDPARTY_DIR + "/python/include/python3.12"
@@ -18,7 +18,7 @@ PY_STDLIB_DIR = PY_LIB_DIR + "/python/lib/python3.12"
 PY_MODULES = []
 
 # Panda modules / libraries
-PANDA_BUILT_DIR = "/home/rdb/panda3d/embuilt"
+PANDA_BUILT_DIR = "/workspaces/Panda3D-WebGL-Editor/built"
 PANDA_MODULES = ["core", "direct"]
 PANDA_LIBS = ["libpanda", "libpandaexpress", "libp3dtool", "libp3dtoolconfig", "libp3webgldisplay", "libp3direct", "libp3openal_audio"]
 PANDA_STATIC = True # built with --static

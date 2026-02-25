@@ -1,0 +1,10 @@
+[
+    {
+        "version": "3.12",
+        "soabi": "cpython-312",
+        "ext_suffix": ".cpython-312-wasm32-emscripten.so",
+        "executable": "/home/codespace/.python/current/bin/python3.12",
+        "purelib": "/home/codespace/.python/current/lib/python3.12/site-packages",
+        "platlib": "/home/codespace/.python/current/lib/python3.12/site-packages"
+    }
+]
