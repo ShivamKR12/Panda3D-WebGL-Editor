@@ -46,18 +46,16 @@ If you have Python installed on your system, you can easily host it locally:
    ```bash
    git clone [https://github.com/ShivamKR12/Panda3D-WebGL-Editor.git](https://github.com/ShivamKR12/Panda3D-WebGL-Editor.git)
    cd Panda3D-WebGL-Editor
-
-```
+   ```
 
 2. Start a local HTTP server:
-```bash
-python -m http.server 8000
-
-```
+   ```bash
+   python -m http.server 8000
+   ```
 
 
 3. Open your browser and navigate to:
-`http://localhost:8000/index.html`
+   `http://localhost:8000/index.html`
 
 ## 🔨 Building from Source
 
