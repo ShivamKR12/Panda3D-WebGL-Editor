@@ -65,6 +65,7 @@
       height: 600px; /* Panda3D default height */
       position: relative;
       flex-shrink: 0;
+      overflow: hidden;
     }
 
     canvas#canvas {
@@ -109,7 +110,9 @@
     }
 
     /* --- Visual Aesthetics (Buttons, Text, etc) --- */
-    img#logo { margin-top: 15%; display: block; margin-left: auto; margin-right: auto; }
+    img#logo { display: block;
+      margin: 0 auto;
+    }
     span#ldtext { display: block; font-size: 13pt; margin-top: 80px; text-align: center; }
     
     a { color: #eee; text-decoration: none; }
@@ -117,6 +120,17 @@
     
     div#ldbar-outer { display: block; background-color: #333; margin: 15px auto 0 auto; height: 11px; width: 80%; max-width: 400px; text-align: left; }
     div#ldbar { background-color: #39f; width: 0%; height: 100%; }
+
+    #ld {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
 
     #console .warning { color: gold; }
     #console .error { color: red; }
