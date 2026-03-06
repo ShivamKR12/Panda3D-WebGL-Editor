@@ -188,7 +188,6 @@
 
 <body>
   <div id="header">
-    <button id="fullscreen-button" onclick="Module.requestFullScreen(false, false)" disabled><i class="fa fa-arrows-alt" aria-hidden="true"></i> Fullscreen</button>
     <div id="toolbar">
       <button id="play-button" onclick="runCode()" disabled><i class="fa fa-play" aria-hidden="true"></i> Run Code</button>
       <button id="stop-button" onclick="stopCode()" disabled><i class="fa fa-stop" aria-hidden="true"></i> Stop</button>
@@ -236,6 +235,7 @@
     editor = ace.edit("editor");
     editor.setTheme("ace/theme/monokai");
     editor.session.setMode("ace/mode/python");
+    editor.setShowPrintMargin(false);
     editor.session.on('change', function onchange() {
       localStorage.setItem("editor-contents", editor.getValue());
     });
