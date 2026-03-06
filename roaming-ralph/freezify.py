@@ -74,6 +74,8 @@ class EmscriptenEnvironment:
     for file in PRELOAD_FILES:
         pandaFlags += " --preload-file " + file
 
+    pandaFlags += " -s EXPORTED_RUNTIME_METHODS=['requestFullscreen'] "
+
     compileObj = f"emcc -O3 -fno-exceptions -fno-rtti -c -o %(basename)s.o %(filename)s -I{pythonInc}"
     linkExe = f"emcc -O3 -s INITIAL_HEAP={INITIAL_HEAP} -s STACK_SIZE={STACK_SIZE} -s ASSERTIONS={ASSERTIONS} -s MAX_WEBGL_VERSION=2 -s NO_EXIT_RUNTIME=1 -fno-exceptions -fno-rtti -o %(basename)s.js %(basename)s.o {modStr} {pythonLib} {pandaFlags}"
     linkDll = f"emcc -O2 -shared -o %(basename)s.o %(basename)s.o {pythonLib}"
