@@ -288,6 +288,30 @@
       'app.run()'
     ].join('\n');
 
+    // --- ADDED SAMPLE PROGRAMS OBJECT ---
+    var samples = {
+      'spinningCamera': defaultCode,
+      'helloWorld': [
+        'from direct.showbase.ShowBase import ShowBase',
+        '',
+        'class MyApp(ShowBase):',
+        '    def __init__(self):',
+        '        ShowBase.__init__(self)',
+        '',
+        'app = MyApp()',
+        'app.run()'
+      ].join('\n')
+    };
+
+    // --- ADDED LOAD SAMPLE FUNCTION ---
+    function loadSample(sampleName) {
+      if (samples[sampleName]) {
+        editor.setValue(samples[sampleName]);
+        // Close the menu after selecting
+        document.getElementById('menu-samples').classList.remove('open');
+      }
+    }
+
     function runCode() {
       document.getElementById("overlay").style.display = "none";
       document.getElementById("canvas").style.display  = "block";
@@ -405,6 +429,15 @@
           <a onclick="editor.execCommand('selectall')">Select All</a>
           <div class="separator"></div>
           <a onclick="editor.setTheme(prompt('Enter a theme'))">Change Theme</a>
+        </div>
+      </button>
+
+      <!-- ADDED SAMPLES DROPDOWN MENU -->
+      <button class="menu-btn" id="menu-samples" onclick="toggleMenu('menu-samples')">
+        Samples
+        <div class="menu-dropdown" id="dropdown-samples">
+          <a onclick="loadSample('spinningCamera')">Spinning Camera</a>
+          <a onclick="loadSample('helloWorld')">Basic Hello World</a>
         </div>
       </button>
 
