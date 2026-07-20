@@ -379,6 +379,23 @@
       input.click();
     }
 
+    function toggleCanvasFullscreen() {
+      var el = document.getElementById('canvas');
+      if (!document.fullscreenElement) {
+        if (el.requestFullscreen) {
+          el.requestFullscreen();
+        } else if (el.webkitRequestFullscreen) { /* Safari */
+          el.webkitRequestFullscreen();
+        } else if (el.msRequestFullscreen) { /* IE11 */
+          el.msRequestFullscreen();
+        }
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
     function toggleMenu(id) {
       var all = document.querySelectorAll('.menu-btn');
       all.forEach(function(btn) {
@@ -454,7 +471,7 @@
       <button id="stop-button" onclick="stopCode()" disabled>
         <i class="fa fa-stop"></i> Stop
       </button>
-      <button id="fullscreen-button" onclick="Module.requestFullScreen(false, false)" disabled>
+      <button id="fullscreen-button" onclick="toggleCanvasFullscreen()" disabled>
         <i class="fa fa-arrows-alt"></i> Fullscreen
       </button>
     </div>
