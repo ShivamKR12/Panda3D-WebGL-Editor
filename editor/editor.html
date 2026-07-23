@@ -360,6 +360,27 @@
       z-index: 25;
       text-shadow: var(--crt-dim-glow);
     }
+
+    ::-webkit-scrollbar { width: 12px; height: 12px; }
+    ::-webkit-scrollbar-track { background: var(--bg-color); border-left: 1px solid var(--fg-secondary); }
+    ::-webkit-scrollbar-thumb { background: var(--fg-secondary); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--fg-primary); }
+    ::-webkit-scrollbar-corner { background: var(--bg-color); }
+
+    body.theme-classic {
+      --bg-color: #181818;
+      --fg-primary: #eee;
+      --fg-secondary: #444;
+      --fg-alert: gold;
+      --crt-glow: none;
+      --crt-dim-glow: none;
+      --ui-border: 1px solid #333;
+    }
+    body.theme-classic .scanlines { display: none; }
+    body.theme-classic #console { color: #eee; text-shadow: none; }
+    body.theme-classic button, body.theme-classic .menu-btn { box-shadow: none; }
+    body.theme-classic .menu-dropdown { box-shadow: none; }
+    body.theme-classic .gutter { background-image: none; background-color: #2a2a2a; }
   </style>
 
   <script type="text/javascript">
@@ -597,7 +618,8 @@
     }
 
     document.addEventListener('click', function(e) {
-      if (!e.target.closest('.menu-btn')) {
+      // Close if clicking outside, OR if clicking an actual link <a> inside the dropdown
+      if (!e.target.closest('.menu-btn') || e.target.tagName.toLowerCase() === 'a') {
         document.querySelectorAll('.menu-btn').forEach(function(btn) {
           btn.classList.remove('open');
         });
@@ -637,6 +659,28 @@
         reader.readAsArrayBuffer(file);
       }
     });
+
+    function toggleEditorFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {});
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    function switchTheme(themeName) {
+      if (themeName === 'classic') {
+        document.body.classList.add('theme-classic');
+        if (typeof editor !== 'undefined') editor.setTheme("ace/theme/monokai");
+        if (typeof term !== 'undefined') term.options.theme = { background: '#181818', foreground: '#eee', cursor: '#eee', selection: 'rgba(255,255,255,0.3)' };
+        localStorage.setItem('editor-theme', 'classic');
+      } else {
+        document.body.classList.remove('theme-classic');
+        if (typeof editor !== 'undefined') editor.setTheme("ace/theme/terminal");
+        if (typeof term !== 'undefined') term.options.theme = { background: '#050505', foreground: '#00FF41', cursor: '#00FF41', selection: 'rgba(0, 255, 65, 0.3)' };
+        localStorage.setItem('editor-theme', 'crt');
+      }
+    }
   </script>
 </head>
 
@@ -664,6 +708,9 @@
           <a onclick="editor.execCommand('redo')">[>] Redo</a>
           <div class="separator"></div>
           <a onclick="editor.execCommand('selectall')">[*] Select All</a>
+          <div class="separator"></div>
+          <a onclick="switchTheme('crt')">[*] Theme: CRT Hacker</a>
+          <a onclick="switchTheme('classic')">[*] Theme: Classic Gray</a>
         </div>
       </button>
 
@@ -689,8 +736,11 @@
       <button id="stop-button" onclick="stopCode()" disabled>
         [ HALT ]
       </button>
-      <button id="fullscreen-button" onclick="toggleCanvasFullscreen()" disabled>
-        [ FULLSCREEN ]
+      <button id="fs-canvas-btn" onclick="toggleCanvasFullscreen()" disabled>
+        [ FS CANVAS ]
+      </button>
+      <button id="fs-editor-btn" onclick="toggleEditorFullscreen()">
+        [ FS EDITOR ]
       </button>
     </div>
   </div>
@@ -776,6 +826,11 @@
     
     term.writeln('PANDA3D KERNEL BOOT SEQUENCE INITIATED...');
     term.writeln('AWAITING WEBASSEMBLY COMPILER...');
+
+    // Apply saved theme on boot
+    if (localStorage.getItem('editor-theme') === 'classic') {
+      switchTheme('classic');
+    }
   </script>
 
   <script>
