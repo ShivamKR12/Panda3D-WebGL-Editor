@@ -6,8 +6,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.5/split.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
   
   <style type="text/css">
     :root {
@@ -152,12 +154,39 @@
     }
 
     @media (max-width: 768px) {
-      #main-area {
-        flex-direction: column !important;
-      }
-      .gutter-horizontal {
-        display: none;
-      }
+      #main-area { flex-direction: column !important; }
+      .gutter-horizontal { display: none; }
+    }
+
+    #panel-sidebar {
+      background: var(--bg-color);
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+      overflow-y: auto;
+    }
+
+    .tree-title {
+      font-size: 20px;
+      border-bottom: 1px solid var(--fg-secondary);
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      text-shadow: var(--crt-glow);
+    }
+
+    .file-item {
+      cursor: pointer;
+      padding: 4px 0;
+      font-size: 18px;
+      transition: color 0.1s;
+    }
+    .file-item:hover {
+      background: var(--fg-primary);
+      color: var(--bg-color);
+    }
+    .file-item.active {
+      color: var(--fg-alert);
+      text-shadow: 0 0 5px var(--fg-alert);
     }
 
     #panel-output {
@@ -168,8 +197,36 @@
     }
 
     #panel-input {
-      position: relative;
+      display: flex;
+      flex-direction: column;
       background: var(--bg-color);
+      position: relative;
+    }
+
+    #editor-tabs {
+      display: flex;
+      background: var(--bg-color);
+      border-bottom: var(--ui-border);
+      height: 35px;
+      overflow-x: auto;
+    }
+    
+    .tab {
+      padding: 8px 16px;
+      border-right: var(--ui-border);
+      cursor: pointer;
+      font-size: 18px;
+      background: var(--bg-color);
+      color: var(--fg-secondary);
+    }
+    .tab.active {
+      background: var(--fg-primary);
+      color: var(--bg-color);
+      font-weight: bold;
+    }
+    .tab:hover:not(.active) {
+      background: #111;
+      color: var(--fg-primary);
     }
 
     .gutter {
@@ -180,10 +237,13 @@
       border-left: var(--ui-border);
       border-right: var(--ui-border);
     }
-    .gutter.gutter-horizontal {
-      cursor: col-resize;
-    }
+    .gutter.gutter-horizontal { cursor: col-resize; }
+    .gutter.gutter-vertical { cursor: row-resize; border: none; border-top: var(--ui-border); border-bottom: var(--ui-border); background-repeat: repeat-x;}
 
+    #editor-container {
+      flex: 1;
+      position: relative;
+    }
     #editor {
       position: absolute;
       inset: 0;
@@ -195,11 +255,8 @@
     #main {
       width: 100%;
       height: auto;
-      flex: 1;
-      min-height: 0;
       position: relative;
       background: #000;
-      border-bottom: var(--ui-border);
     }
 
     canvas#canvas {
@@ -264,28 +321,14 @@
       transition: width 0.1s step-end;
     }
 
-    #console {
-      display: block;
-      height: 200px;
-      flex-shrink: 0;
+    #terminal-container {
+      height: 40%;
       width: 100%;
       padding: 10px;
-      overflow-y: auto;
       background: var(--bg-color);
-      color: var(--fg-primary);
-      white-space: pre-wrap;
-      font-size: 16px;
       z-index: 15;
       position: relative;
-      text-shadow: var(--crt-glow);
-    }
-    #console .warning { color: var(--fg-alert); text-shadow: 0 0 5px var(--fg-alert); }
-    #console .error   { color: red; text-shadow: 0 0 5px red; }
-    #console::before {
-      content: "> SYSTEM LOG READY...";
-      display: block;
-      margin-bottom: 10px;
-      opacity: 0.5;
+      overflow: hidden;
     }
 
     #credits {
@@ -301,9 +344,6 @@
       z-index: 25;
       text-shadow: var(--crt-dim-glow);
     }
-
-    a { color: var(--fg-primary); text-decoration: none; }
-    a:hover { background: var(--fg-primary); color: var(--bg-color); text-shadow: none; }
   </style>
 
   <script type="text/javascript">
@@ -334,7 +374,9 @@
       var stopFunc = Module.cwrap('stopPythonCode', 'number');
       stopFunc();
 
-      document.getElementById("console").innerHTML = '';
+      term.clear();
+      term.writeln('\x1b[1;32m> EXECUTING MAIN.PY...\x1b[0m');
+      
       var runFunc = Module.cwrap('runPythonCode', 'number', ['string'], {async: true});
       runFunc(editor.getValue());
     }
@@ -342,8 +384,25 @@
     function stopCode() {
       var stopFunc = Module.cwrap('stopPythonCode', 'number');
       stopFunc();
+      term.writeln('\x1b[1;31m> PROCESS HALTED BY USER.\x1b[0m');
       document.getElementById('stop-button').disabled = true;
     }
+
+    function toggleMenu(id) {
+      var all = document.querySelectorAll('.menu-btn');
+      all.forEach(function(btn) {
+        if (btn.id !== id) btn.classList.remove('open');
+      });
+      document.getElementById(id).classList.toggle('open');
+    }
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.menu-btn')) {
+        document.querySelectorAll('.menu-btn').forEach(function(btn) {
+          btn.classList.remove('open');
+        });
+      }
+    });
 
     function newFile() {
       editor.setValue('');
@@ -433,9 +492,7 @@
 </head>
 
 <body>
-  
   <div class="scanlines"></div>
-
   <div id="header">
     <div id="header-left">
       <button class="menu-btn" id="menu-file" onclick="toggleMenu('menu-file')">
@@ -490,6 +547,15 @@
   </div>
 
   <div id="main-area">
+    <div id="panel-sidebar">
+      <div class="tree-title">SYS_DIR /</div>
+      <div class="file-item active">|-- main.py</div>
+      <div class="file-item">|-- config.py</div>
+      <div class="file-item">|-- models/</div>
+      <div class="file-item">&nbsp;&nbsp;|-- player.bam</div>
+      <div class="file-item">|-- textures/</div>
+      <div class="file-item">&nbsp;&nbsp;|-- map.png</div>
+    </div>
     <div id="panel-output">
       <div id="main">
         <div id="overlay">
@@ -500,11 +566,17 @@
         </div>
         <canvas id="canvas" style="display:none;" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
       </div>
-      <div id="console"></div>
+      <div id="terminal-container"></div>
     </div>
     
     <div id="panel-input">
-      <pre id="editor"></pre>
+      <div id="editor-tabs">
+        <div class="tab active">main.py</div>
+        <div class="tab">config.py</div>
+      </div>
+      <div id="editor-container">
+        <pre id="editor"></pre>
+      </div>
     </div>
   </div>
 
@@ -528,12 +600,50 @@
   </script>
 
   <script>
-    Split(['#panel-output', '#panel-input'], {
-      sizes: [50, 50],
-      minSize: 300,
+    var term = new Terminal({
+      theme: {
+        background: '#050505',
+        foreground: '#00FF41',
+        cursor: '#00FF41',
+        selection: 'rgba(0, 255, 65, 0.3)'
+      },
+      fontFamily: '"VT323", monospace',
+      fontSize: 18,
+      cursorBlink: true
+    });
+    
+    const fitAddon = new FitAddon.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(document.getElementById('terminal-container'));
+    fitAddon.fit();
+    
+    term.writeln('PANDA3D KERNEL BOOT SEQUENCE INITIATED...');
+    term.writeln('AWAITING WEBASSEMBLY COMPILER...');
+  </script>
+
+  <script>
+    // 3 Panes: Sidebar, Canvas/Terminal, Editor
+    Split(['#panel-sidebar', '#panel-output', '#panel-input'], {
+      sizes: [15, 45, 40],
+      minSize: [150, 300, 300],
       gutterSize: 8,
       cursor: 'col-resize'
     });
+
+    // Vertical split inside Output pane (Canvas top, Terminal bottom)
+    Split(['#main', '#terminal-container'], {
+      direction: 'vertical',
+      sizes: [70, 30],
+      minSize: [200, 100],
+      gutterSize: 8,
+      cursor: 'row-resize',
+      onDragEnd: function() {
+        fitAddon.fit(); // Resize terminal when pane is dragged
+      }
+    });
+    
+    // Ensure terminal resizes on window resize
+    window.addEventListener('resize', () => { fitAddon.fit(); });
   </script>
 
   <script type="text/javascript">
@@ -548,40 +658,25 @@
       postRun: [function() {
         var overlay = document.getElementById("overlay");
         if (overlay) overlay.style.display = "none";
+        term.writeln('\x1b[1;32mSYSTEM READY. WAITING FOR INPUT.\x1b[0m');
       }],
 
-      print: (function() {
-        var el = document.getElementById('console');
-        return function(text) {
-          if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-          text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          el.innerHTML += '<samp>> ' + text + '\n</samp>';
-          el.scrollTop = el.scrollHeight;
-        };
-      })(),
+      // Reroute Emscripten outputs to Xterm.js
+      print: function(text) {
+        if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+        term.writeln(text);
+      },
 
-      printErr: (function() {
-        var el = document.getElementById('console');
-        return function(text) {
-          if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-          text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          var cls;
-          if ((text[0] === ':' && text.indexOf('(warning): ') !== -1) || text.indexOf('WARNING:') === 0) {
-            cls = 'warning';
-          } else if ((text[0] === ':' && text.indexOf('(error): ') !== -1) ||
-                     text.indexOf('ERROR:') === 0 ||
-                     text === 'Traceback (most recent call last):' ||
-                     text.indexOf('Error: ') > 1 ||
-                     text.indexOf('Exception: ') > 1 ||
-                     text.indexOf('  File "') === 0) {
-            cls = 'error';
-          }
-          el.innerHTML += cls
-            ? '<samp class="' + cls + '">> ' + text + '\n</samp>'
-            : '<samp>> ' + text + '\n</samp>';
-          el.scrollTop = el.scrollHeight;
-        };
-      })(),
+      printErr: function(text) {
+        if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+        if (text.includes('Traceback') || text.includes('Error')) {
+            term.writeln('\x1b[1;31m' + text + '\x1b[0m'); // Red for errors
+        } else if (text.includes('warning') || text.includes('WARNING')) {
+            term.writeln('\x1b[1;33m' + text + '\x1b[0m'); // Amber for warnings
+        } else {
+            term.writeln(text);
+        }
+      },
 
       canvas: (function() {
         var canvas = document.getElementById('canvas');
@@ -632,6 +727,7 @@
 
     window.onerror = function() {
       Module.setStatus('FATAL SYSTEM ERROR');
+      term.writeln('\x1b[1;31m[CRITICAL] BROWSER EXCEPTION CAUGHT.\x1b[0m');
       Module.setStatus = function(t) {
         if (t) Module.printErr('[post-exception status] ' + t);
       };
