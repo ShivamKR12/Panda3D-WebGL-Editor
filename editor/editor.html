@@ -370,11 +370,15 @@
       let html = '';
       try {
         let items = FS.readdir(dir);
-        // Ignore internal emscripten root folders to keep it clean
-        let skip = ['.', '..', 'dev', 'proc', 'tmp', 'home'];
+        // System folders to hide from root
+        let sysSkip = ['dev', 'proc', 'tmp', 'home'];
         
         for (let item of items) {
-          if (level === 0 && skip.includes(item)) continue;
+          // ALWAYS skip current (.) and parent (..) directory pointers to prevent infinite loops
+          if (item === '.' || item === '..') continue;
+          
+          // Hide internal Emscripten system folders only at the root level
+          if (level === 0 && sysSkip.includes(item)) continue;
           
           let path = dir === '/' ? '/' + item : dir + '/' + item;
           let stat = FS.stat(path);
