@@ -254,9 +254,9 @@
 
     #main {
       width: 100%;
-      height: auto;
       position: relative;
       background: #000;
+      min-height: 0; /* Allows Split.js to shrink the panel */
     }
 
     canvas#canvas {
@@ -322,13 +322,13 @@
     }
 
     #terminal-container {
-      height: 40%;
       width: 100%;
       padding: 10px;
       background: var(--bg-color);
       z-index: 15;
       position: relative;
       overflow: hidden;
+      min-height: 0; /* Allows Split.js to shrink the panel */
     }
 
     #dropzone {
@@ -381,6 +381,8 @@
     body.theme-classic button, body.theme-classic .menu-btn { box-shadow: none; }
     body.theme-classic .menu-dropdown { box-shadow: none; }
     body.theme-classic .gutter { background-image: none; background-color: #2a2a2a; }
+    /* Disable uppercase forced styling for classic theme */
+    body.theme-classic, body.theme-classic * { text-transform: none !important; }
   </style>
 
   <script type="text/javascript">
@@ -928,7 +930,7 @@
           document.getElementById('ldbar-outer').style.display = 'none';
           document.getElementById('play-button').disabled       = false;
           document.getElementById('stop-button').disabled       = false;
-          document.getElementById('fullscreen-button').disabled = false;
+          document.getElementById('fs-canvas-btn').disabled     = false;
         }
       },
 
