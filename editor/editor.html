@@ -509,8 +509,30 @@
       term.writeln(`\x1b[1;32m> EXECUTING ${currentOpenFile}...\x1b[0m`);
       
       var runFunc = Module.cwrap('runPythonCode', 'number', ['string'], {async: true});
-      // Always run whatever is currently in the active editor buffer
-      runFunc(editor.getValue());
+      
+      // Base64 encode the code to completely avoid quoting/escaping issues when injecting into Python
+      let b64Code = btoa(unescape(encodeURIComponent(editor.getValue())));
+      
+      // Wrap the user code to simulate a proper Python execution environment for multi-file projects
+      let wrapperCode = `
+import sys, os, base64
+
+# Ensure the root and the current file's directory are in the import paths
+if '/' not in sys.path: 
+    sys.path.insert(0, '/')
+_dir = os.path.dirname('${currentOpenFile}')
+if _dir and _dir not in sys.path: 
+    sys.path.insert(0, _dir)
+
+# Set __file__ so pathlib and absolute path resolution works
+globals()['__file__'] = '${currentOpenFile}'
+
+# Decode and execute the actual script
+_code = base64.b64decode('${b64Code}').decode('utf-8')
+exec(compile(_code, '${currentOpenFile}', 'exec'), globals())
+`;
+      
+      runFunc(wrapperCode);
     }
     
     function stopCode() {
