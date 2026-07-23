@@ -119,8 +119,7 @@
       flex-direction: column;
       box-shadow: 5px 5px 0 var(--fg-secondary);
     }
-    .menu-btn:focus .menu-dropdown,
-    .menu-btn.open   .menu-dropdown {
+    .menu-btn.open .menu-dropdown {
       display: flex;
     }
     .menu-dropdown a {
@@ -236,6 +235,7 @@
       background-position: center;
       border-left: var(--ui-border);
       border-right: var(--ui-border);
+      z-index: 50; /* Keeps the drag line above the 3D Canvas */
     }
     .gutter.gutter-horizontal { cursor: col-resize; }
     .gutter.gutter-vertical { cursor: row-resize; border: none; border-top: var(--ui-border); border-bottom: var(--ui-border); background-repeat: repeat-x;}
@@ -257,6 +257,9 @@
       position: relative;
       background: #000;
       min-height: 0; /* Allows Split.js to shrink the panel */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; /* Stops canvas from bleeding over the drag line */
     }
 
     canvas#canvas {
@@ -323,13 +326,16 @@
 
     #terminal-container {
       width: 100%;
-      padding: 10px;
+      padding: 0px; /* Removed padding so scrollbar hugs the edge */
       background: var(--bg-color);
       z-index: 15;
       position: relative;
       overflow: hidden;
       min-height: 0; /* Allows Split.js to shrink the panel */
     }
+
+    /* Small buffer specifically for the terminal text, independent of scrollbar */
+    .xterm-viewport { padding-left: 5px; }
 
     #dropzone {
       display: none;
@@ -841,7 +847,9 @@
       sizes: [15, 45, 40],
       minSize: [150, 300, 300],
       gutterSize: 8,
-      cursor: 'col-resize'
+      cursor: 'col-resize',
+      onDrag: function() { fitAddon.fit(); },
+      onDragEnd: function() { fitAddon.fit(); }
     });
 
     // Vertical split inside Output pane (Canvas top, Terminal bottom)
@@ -851,6 +859,7 @@
       minSize: [200, 100],
       gutterSize: 8,
       cursor: 'row-resize',
+      onDrag: function() { fitAddon.fit(); },
       onDragEnd: function() {
         fitAddon.fit(); // Resize terminal when pane is dragged
       }
