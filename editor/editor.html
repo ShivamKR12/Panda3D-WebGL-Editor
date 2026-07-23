@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
   <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+  <!-- JSZip for Project Import/Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   
   <style type="text/css">
     :root {
@@ -40,7 +42,7 @@
       top: 0; left: 0; right: 0; bottom: 0;
       background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
       background-size: 100% 4px;
-      z-index: 9999;
+      z-index: 9999; /* Forces header and its dropdowns over everything */
       pointer-events: none;
       opacity: 0.6;
     }
@@ -51,7 +53,7 @@
       height: 50px;
       background-color: var(--bg-color);
       border-bottom: var(--ui-border);
-      z-index: 20;
+      z-index: 9999; 
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -575,6 +577,105 @@
       a.click();
     }
 
+    // Helper function to safely create nested directories in Emscripten FS
+    function ensureDirFS(path) {
+      let parts = path.split('/').filter(p => p !== "");
+      let current = "";
+      for (let part of parts) {
+        current += "/" + part;
+        try { FS.mkdir(current); } catch(e) {} // Ignores error if directory already exists
+      }
+    }
+
+    function importProject() {
+      if (typeof FS === 'undefined' || typeof JSZip === 'undefined') {
+        term.writeln('\x1b[1;31m> SYSTEM ERROR: VFS OR JSZIP NOT READY.\x1b[0m');
+        return;
+      }
+      var input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.zip';
+      input.onchange = function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        
+        term.writeln(`\x1b[1;33m> EXTRACTING ARCHIVE: ${file.name}...\x1b[0m`);
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+          JSZip.loadAsync(ev.target.result).then(function(zip) {
+            let promises = [];
+            zip.forEach(function (relativePath, zipEntry) {
+              if (zipEntry.dir) {
+                ensureDirFS('/' + relativePath);
+              } else {
+                promises.push(zipEntry.async("uint8array").then(function (data) {
+                  let path = '/' + relativePath;
+                  let dir = path.substring(0, path.lastIndexOf('/'));
+                  if (dir) ensureDirFS(dir);
+                  FS.writeFile(path, data);
+                }));
+              }
+            });
+            Promise.all(promises).then(() => {
+              term.writeln('\x1b[1;32m> PROJECT IMPORTED SUCCESSFULLY.\x1b[0m');
+              refreshSidebar();
+              try {
+                if (FS.stat('/main.py')) openFileFromFS('/main.py');
+              } catch(err) {}
+            });
+          });
+        };
+        reader.readAsArrayBuffer(file);
+      };
+      input.click();
+    }
+
+    function exportProject() {
+      if (typeof FS === 'undefined' || typeof JSZip === 'undefined') {
+        term.writeln('\x1b[1;31m> SYSTEM ERROR: VFS OR JSZIP NOT READY.\x1b[0m');
+        return;
+      }
+      term.writeln('\x1b[1;33m> PACKAGING PROJECT INTO ZIP...\x1b[0m');
+      var zip = new JSZip();
+      
+      // Recursively pack the virtual filesystem
+      function addFilesToZip(dir, currentZipFolder) {
+        let items = FS.readdir(dir);
+        let sysSkip = ['.', '..', 'dev', 'proc', 'tmp', 'home'];
+        
+        for (let item of items) {
+          if (item === '.' || item === '..') continue;
+          if (dir === '/' && sysSkip.includes(item)) continue; // Skip Emscripten system folders
+          
+          let path = dir === '/' ? '/' + item : dir + '/' + item;
+          let stat = FS.stat(path);
+          
+          if (FS.isDir(stat.mode)) {
+            let newFolder = currentZipFolder.folder(item);
+            addFilesToZip(path, newFolder);
+          } else {
+            // Read as raw Uint8Array byte buffer
+            let content = FS.readFile(path);
+            currentZipFolder.file(item, content);
+          }
+        }
+      }
+      
+      try {
+        addFilesToZip('/', zip);
+        zip.generateAsync({type:"blob"}).then(function(content) {
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(content);
+          a.download = "Panda3D_Project.zip";
+          a.click();
+          term.writeln('\x1b[1;32m> PROJECT EXPORTED SUCCESSFULLY.\x1b[0m');
+        });
+      } catch(e) {
+        term.writeln('\x1b[1;31m> ERROR PACKAGING PROJECT.\x1b[0m');
+        console.error(e);
+      }
+    }
+
     function resetToDefault() {
       editor.setValue(defaultCode, -1);
       localStorage.removeItem('editor-contents');
@@ -699,13 +800,15 @@
       <button class="menu-btn" id="menu-file" onclick="toggleMenu('menu-file')">
         File
         <div class="menu-dropdown" id="dropdown-file">
-          <a onclick="newFile()">[+] New</a>
-          <a onclick="openFile()">[>] Open...</a>
-          <a onclick="saveFile()">[s] Save</a>
+          <a onclick="newFile()">[+] New Script</a>
+          <a onclick="openFile()">[>] Upload Script</a>
+          <a onclick="includeAssets()">[^] Upload Assets</a>
+          <a onclick="saveFile()">[s] Download Current File</a>
           <div class="separator"></div>
-          <a onclick="resetToDefault()">[x] Reset</a>
+          <a onclick="importProject()">[^] Import Project (.zip)</a>
+          <a onclick="exportProject()">[v] Export Project (.zip)</a>
           <div class="separator"></div>
-          <a onclick="includeAssets()">[^] Assets...</a>
+          <a onclick="resetToDefault()">[x] Factory Reset</a>
         </div>
       </button>
 
