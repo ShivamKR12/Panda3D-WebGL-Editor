@@ -3,9 +3,25 @@
 <head>
   <title>Panda3D WebGL Live Python Editor</title>
   <link rel="shortcut icon" href="logo.png" type="image/png">
-  <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Roboto" />
+  <!-- Retro Pixel Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
+  <!-- Split.js for Resizable Panes -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/split.js/1.6.5/split.min.js"></script>
+  
   <style type="text/css">
+    :root {
+      --bg-color: #050505;
+      --fg-primary: #00FF41;
+      --fg-secondary: #008F11;
+      --fg-alert: #FFB000;
+      --crt-glow: 0 0 5px var(--fg-primary), 0 0 2px var(--fg-primary);
+      --crt-dim-glow: 0 0 3px var(--fg-secondary);
+      --ui-border: 2px solid var(--fg-secondary);
+    }
+
     *, *::before, *::after { box-sizing: border-box; }
 
     html, body {
@@ -13,65 +29,98 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background: #181818;
-      font-family: Roboto, sans-serif;
-      color: #eee;
+      background: var(--bg-color);
+      font-family: 'VT323', monospace;
+      color: var(--fg-primary);
+      text-transform: uppercase;
+    }
+
+    /* ── CRT Scanlines Effect ── */
+    .scanlines {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+      background-size: 100% 4px;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.6;
     }
 
     #header {
       position: absolute;
       top: 0; left: 0; right: 0;
       height: 50px;
-      background-color: #111;
+      background-color: var(--bg-color);
+      border-bottom: var(--ui-border);
       z-index: 20;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 8px;
+      padding: 0 12px;
+      box-shadow: 0 2px 10px rgba(0, 255, 65, 0.1);
     }
 
     #header-left {
       display: flex;
       align-items: center;
-      gap: 0;
+      gap: 10px;
     }
 
     #header-right {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 10px;
     }
 
-    /* ── Menu buttons ── */
-    .menu-btn {
+    /* ── 16-Bit Menu Buttons ── */
+    button, .menu-btn {
       min-width: unset;
-      background: transparent;
-      border: none;
-      color: #eee;
-      font-family: Roboto, sans-serif;
-      font-size: 13px;
-      font-weight: normal;
-      padding: 8px 14px;
+      background: var(--bg-color);
+      border: var(--ui-border);
+      color: var(--fg-primary);
+      font-family: 'VT323', monospace;
+      font-size: 18px;
+      padding: 6px 14px;
       margin: 0;
       cursor: pointer;
       white-space: nowrap;
       position: relative;
+      text-shadow: var(--crt-glow);
+      box-shadow: 3px 3px 0 var(--fg-secondary);
+      transition: all 0.1s;
     }
-    .menu-btn:hover  { background-color: #2a2a2a; }
-    .menu-btn:active { background-color: #333; }
-    .menu-btn:disabled { color: #555; background: transparent; cursor: default; }
+    
+    button:hover, .menu-btn:hover, .menu-btn.open { 
+      background-color: var(--fg-primary); 
+      color: var(--bg-color);
+      text-shadow: none;
+    }
+    
+    button:active, .menu-btn:active {
+      transform: translate(3px, 3px);
+      box-shadow: none;
+    }
+    
+    button:disabled { 
+      color: #333; 
+      border-color: #333;
+      box-shadow: 3px 3px 0 #333;
+      cursor: default; 
+      text-shadow: none;
+    }
 
     /* ── Dropdown panels ── */
     .menu-dropdown {
       display: none;
       position: absolute;
-      top: 50px;
-      left: 0;
+      top: 40px;
+      left: -2px;
       min-width: 180px;
-      background: #1e1e1e;
-      border: 1px solid #333;
+      background: var(--bg-color);
+      border: var(--ui-border);
       z-index: 100;
       flex-direction: column;
+      box-shadow: 5px 5px 0 var(--fg-secondary);
     }
     .menu-btn:focus .menu-dropdown,
     .menu-btn.open   .menu-dropdown {
@@ -79,21 +128,26 @@
     }
     .menu-dropdown a {
       display: block;
-      padding: 8px 16px;
-      font-size: 13px;
-      color: #eee;
+      padding: 10px 16px;
+      font-size: 18px;
+      color: var(--fg-primary);
       text-decoration: none;
       white-space: nowrap;
       cursor: pointer;
+      text-shadow: var(--crt-glow);
     }
-    .menu-dropdown a:hover { background: #2a2a2a; }
+    .menu-dropdown a:hover { 
+      background: var(--fg-primary); 
+      color: var(--bg-color);
+      text-shadow: none;
+    }
     .menu-dropdown .separator {
-      height: 1px;
-      background: #333;
-      margin: 4px 0;
+      height: 2px;
+      background: var(--fg-secondary);
+      margin: 0;
     }
 
-    /* ── Main area: sits between header and credits ── */
+    /* ── Main area & Split.js Panes ── */
     #main-area {
       position: absolute;
       top: 50px; bottom: 35px;
@@ -103,27 +157,47 @@
       overflow: hidden;
     }
 
-    /* ── Left panel: canvas + console ── */
+    /* Mobile Responsive Stack */
+    @media (max-width: 768px) {
+      #main-area {
+        flex-direction: column !important;
+      }
+      .gutter-horizontal {
+        display: none;
+      }
+    }
+
     #panel-output {
-      flex: 1;
-      min-width: 0;
       display: flex;
       flex-direction: column;
-      background: #000;
+      background: var(--bg-color);
       overflow: hidden;
     }
 
-    /* ── Right panel: code editor ── */
     #panel-input {
-      flex: 1;
-      min-width: 0;
       position: relative;
+      background: var(--bg-color);
+    }
+
+    /* Split.js Gutter Styling */
+    .gutter {
+      background-color: var(--bg-color);
+      background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10"><rect width="2" height="10" fill="%23008F11"/></svg>');
+      background-repeat: repeat-y;
+      background-position: center;
+      border-left: var(--ui-border);
+      border-right: var(--ui-border);
+    }
+    .gutter.gutter-horizontal {
+      cursor: col-resize;
     }
 
     #editor {
       position: absolute;
       inset: 0;
       margin: 0;
+      font-family: 'VT323', monospace !important;
+      font-size: 18px !important;
     }
 
     /* ── Canvas container ── */
@@ -134,6 +208,7 @@
       min-height: 0;
       position: relative;
       background: #000;
+      border-bottom: var(--ui-border);
     }
 
     canvas#canvas {
@@ -142,93 +217,87 @@
       height: 100%;
       background: #000;
       z-index: 0;
-      cursor: default;
+      cursor: crosshair;
     }
 
-    /* ── Loading overlay: covers canvas area ── */
+    /* ── Retro Loading Overlay ── */
     #overlay {
       position: absolute;
-      top: 0; left: 0;
-      right: 0; bottom: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
       z-index: 10;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: #0d0d0d;
-      pointer-events: none;
-    }
-
-    #overlay img#logo-overlay {
-      position: absolute;
-      top: 22%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      max-width: 160px;
-      opacity: .85;
+      background: var(--bg-color);
     }
 
     #center-ui {
       display: flex;
       flex-direction: column;
       align-items: center;
+      border: var(--ui-border);
+      padding: 30px;
+      box-shadow: 10px 10px 0 var(--fg-secondary);
     }
 
-    .spinner {
-      height: 32px;
-      width: 32px;
-      margin: 0 0 14px 0;
-      animation: spin .8s linear infinite;
-      border: 4px solid #333;
-      border-top-color: #39f;
-      border-radius: 50%;
+    .blinking-text {
+      animation: blink 1s step-end infinite;
     }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
+    @keyframes blink {
+      50% { opacity: 0; }
     }
 
     #status {
       font-weight: 700;
-      font-size: 13px;
-      color: #787878;
+      font-size: 24px;
+      color: var(--fg-primary);
       text-align: center;
+      text-shadow: var(--crt-glow);
+      margin-bottom: 20px;
     }
 
     #ldbar-outer {
       display: inline-block;
-      background-color: #333;
-      margin-top: 12px;
-      height: 6px;
-      width: 260px;
-      border-radius: 3px;
+      background-color: var(--bg-color);
+      border: 2px solid var(--fg-secondary);
+      height: 20px;
+      width: 300px;
       overflow: hidden;
     }
+    
     #ldbar {
-      background-color: #39f;
+      background-color: var(--fg-primary);
       width: 0%;
       height: 100%;
-      transition: width .15s ease;
+      transition: width 0.1s step-end;
     }
 
-    /* ── Console: fixed height at the bottom of the left panel ── */
+    /* ── Console ── */
     #console {
       display: block;
-      height: 150px;
+      height: 200px;
       flex-shrink: 0;
       width: 100%;
-      padding: 4px 6px;
+      padding: 10px;
       overflow-y: auto;
-      background: #181818;
+      background: var(--bg-color);
+      color: var(--fg-primary);
       white-space: pre-wrap;
-      font-size: 12px;
+      font-size: 16px;
       z-index: 15;
       position: relative;
-      -webkit-user-select: text;
-      user-select: text;
+      text-shadow: var(--crt-glow);
     }
-    #console .warning { color: gold; }
-    #console .error   { color: #f55; }
+    #console .warning { color: var(--fg-alert); text-shadow: 0 0 5px var(--fg-alert); }
+    #console .error   { color: red; text-shadow: 0 0 5px red; }
+    #console::before {
+      content: "> SYSTEM LOG READY...";
+      display: block;
+      margin-bottom: 10px;
+      opacity: 0.5;
+    }
 
     /* ── Credits bar ── */
     #credits {
@@ -238,32 +307,15 @@
       padding: 0 10px;
       display: flex;
       align-items: center;
-      background-color: #111;
-      font-size: 10pt;
+      background-color: var(--bg-color);
+      border-top: var(--ui-border);
+      font-size: 16px;
       z-index: 25;
+      text-shadow: var(--crt-dim-glow);
     }
 
-    a { color: #eee; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-
-    /* ── Buttons ── */
-    button {
-      min-width: 130px;
-      background-color: #39f;
-      border: none;
-      font-weight: bold;
-      text-align: center;
-      color: white;
-      padding: 8px 12px;
-      margin: 0 4px;
-      font-family: Roboto, sans-serif;
-      font-size: 13px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    button:hover    { background-color: #4af; }
-    button:active   { background-color: #28e; }
-    button:disabled { background-color: #555; cursor: default; }
+    a { color: var(--fg-primary); text-decoration: none; }
+    a:hover { background: var(--fg-primary); color: var(--bg-color); text-shadow: none; }
   </style>
 
   <script type="text/javascript">
@@ -288,7 +340,6 @@
       'app.run()'
     ].join('\n');
 
-    // --- ADDED SAMPLE PROGRAMS OBJECT ---
     var samples = {
       'hello_world': 'from math import pi, sin, cos\n\nfrom direct.showbase.ShowBase import ShowBase\nfrom direct.task import Task\nfrom direct.actor.Actor import Actor\nfrom direct.interval.IntervalGlobal import Sequence\nfrom panda3d.core import Point3\n\nclass MyApp(ShowBase):\n    def __init__(self):\n        ShowBase.__init__(self)\n\n        # Disable the camera trackball controls.\n        self.disableMouse()\n\n        # Load the environment model.\n        self.scene = self.loader.loadModel("models/environment.bam")\n        # Reparent the model to render.\n        self.scene.reparentTo(self.render)\n        # Apply scale and position transforms on the model.\n        self.scene.setScale(0.25, 0.25, 0.25)\n        self.scene.setPos(-8, 42, 0)\n\n        # Add the spinCameraTask procedure to the task manager.\n        self.taskMgr.add(self.spinCameraTask, "SpinCameraTask")\n\n        # Load and transform the panda actor.\n        self.pandaActor = Actor("models/panda-model.bam",\n                                {"walk": "models/panda-walk4.bam"})\n        self.pandaActor.setScale(0.005, 0.005, 0.005)\n        self.pandaActor.reparentTo(self.render)\n        # Loop its animation.\n        self.pandaActor.loop("walk")\n\n        # Create the four lerp intervals needed for the panda to\n        # walk back and forth.\n        pandaPosInterval1 = self.pandaActor.posInterval(13,\n                                                        Point3(0, -10, 0),\n                                                        startPos=Point3(0, 10, 0))\n        pandaPosInterval2 = self.pandaActor.posInterval(13,\n                                                        Point3(0, 10, 0),\n                                                        startPos=Point3(0, -10, 0))\n        pandaHprInterval1 = self.pandaActor.hprInterval(3,\n                                                        Point3(180, 0, 0),\n                                                        startHpr=Point3(0, 0, 0))\n        pandaHprInterval2 = self.pandaActor.hprInterval(3,\n                                                        Point3(0, 0, 0),\n                                                        startHpr=Point3(180, 0, 0))\n\n        # Create and play the sequence that coordinates the intervals.\n        self.pandaPace = Sequence(pandaPosInterval1,\n                                  pandaHprInterval1,\n                                  pandaPosInterval2,\n                                  pandaHprInterval2,\n                                  name="pandaPace")\n        self.pandaPace.loop()\n\n    # Define a procedure to move the camera.\n    def spinCameraTask(self, task):\n        angleDegrees = task.time * 6.0\n        angleRadians = angleDegrees * (pi / 180.0)\n        self.camera.setPos(20 * sin(angleRadians), -20.0 * cos(angleRadians), 3)\n        self.camera.setHpr(angleDegrees, 0, 0)\n        return Task.cont\n\napp = MyApp()\napp.run()\n',
       'asteroids': '#!/usr/bin/env python\n\n# Author: Shao Zhang, Phil Saltzman, and Greg Lindley\n# Last Updated: 2015-03-13\n#\n# This tutorial demonstrates the use of tasks. A task is a function that\n# gets called once every frame. They are good for things that need to be\n# updated very often. In the case of asteroids, we use tasks to update\n# the positions of all the objects, and to check if the bullets or the\n# ship have hit the asteroids.\n#\n# Note: This definitely a complicated example. Tasks are the cores of\n# most games so it seemed appropriate to show what a full game in Panda\n# could look like.\n\nfrom direct.showbase.ShowBase import ShowBase\nfrom panda3d.core import TextNode, TransparencyAttrib\nfrom panda3d.core import LPoint3, LVector3\nfrom direct.gui.OnscreenText import OnscreenText\nfrom direct.task.Task import Task\nfrom math import sin, cos, pi\nfrom random import randint, choice, random\nfrom direct.interval.MetaInterval import Sequence\nfrom direct.interval.FunctionInterval import Wait, Func\nimport sys\n\n# Constants that will control the behavior of the game. It is good to\n# group constants like this so that they can be changed once without\n# having to find everywhere they are used in code\nSPRITE_POS = 55     # At default field of view and a depth of 55, the screen\n# dimensions is 40x30 units\nSCREEN_X = 20       # Screen goes from -20 to 20 on X\nSCREEN_Y = 15       # Screen goes from -15 to 15 on Y\nTURN_RATE = 360     # Degrees ship can turn in 1 second\nACCELERATION = 10   # Ship acceleration in units/sec/sec\nMAX_VEL = 6         # Maximum ship velocity in units/sec\nMAX_VEL_SQ = MAX_VEL ** 2  # Square of the ship velocity\nDEG_TO_RAD = pi / 180  # translates degrees to radians for sin and cos\nBULLET_LIFE = 2     # How long bullets stay on screen before removed\nBULLET_REPEAT = .2  # How often bullets can be fired\nBULLET_SPEED = 10   # Speed bullets move\nAST_INIT_VEL = 1    # Velocity of the largest asteroids\nAST_INIT_SCALE = 3  # Initial asteroid scale\nAST_VEL_SCALE = 2.2  # How much asteroid speed multiplies when broken up\nAST_SIZE_SCALE = .6  # How much asteroid scale changes when broken up\nAST_MIN_SCALE = 1.1  # If and asteroid is smaller than this and is hit,\n# it disappears instead of splitting up\n\n# This helps reduce the amount of code used by loading objects, since all of\n# the objects are pretty much the same.\ndef loadObject(tex=None, pos=LPoint3(0, 0), depth=SPRITE_POS, scale=1,\n               transparency=True):\n    # Every object uses the plane model and is parented to the camera\n    # so that it faces the screen.\n    obj = loader.loadModel("models/plane.bam")\n    obj.reparentTo(camera)\n\n    # Set the initial position and scale.\n    obj.setPos(pos.getX(), depth, pos.getY())\n    obj.setScale(scale)\n\n    # This tells Panda not to worry about the order that things are drawn in\n    # (ie. disable Z-testing).  This prevents an effect known as Z-fighting.\n    obj.setBin("unsorted", 0)\n    obj.setDepthTest(False)\n\n    if transparency:\n        # Enable transparency blending.\n        obj.setTransparency(TransparencyAttrib.MAlpha)\n\n    if tex:\n        # Load and set the requested texture.\n        tex = loader.loadTexture("textures/" + tex)\n        obj.setTexture(tex, 1)\n\n    return obj\n\n\n# Macro-like function used to reduce the amount to code needed to create the\n# on screen instructions\ndef genLabelText(text, i):\n    return OnscreenText(text=text, parent=base.a2dTopLeft, pos=(0.07, -.06 * i - 0.1),\n                        fg=(1, 1, 1, 1), align=TextNode.ALeft, shadow=(0, 0, 0, 0.5), scale=.05)\n\n\nclass AsteroidsDemo(ShowBase):\n\n    def __init__(self):\n        # Initialize the ShowBase class from which we inherit, which will\n        # create a window and set up everything we need for rendering into it.\n        ShowBase.__init__(self)\n\n        # This code puts the standard title and instruction text on screen\n        self.title = OnscreenText(text="Panda3D: Tutorial - Tasks",\n                                  parent=base.a2dBottomRight, scale=.07,\n                                  align=TextNode.ARight, pos=(-0.1, 0.1),\n                                  fg=(1, 1, 1, 1), shadow=(0, 0, 0, 0.5))\n        self.escapeText = genLabelText("ESC: Quit", 0)\n        self.leftkeyText = genLabelText("[Left Arrow]: Turn Left (CCW)", 1)\n        self.rightkeyText = genLabelText("[Right Arrow]: Turn Right (CW)", 2)\n        self.upkeyText = genLabelText("[Up Arrow]: Accelerate", 3)\n        self.spacekeyText = genLabelText("[Space Bar]: Fire", 4)\n\n        # Disable default mouse-based camera control.  This is a method on the\n        # ShowBase class from which we inherit.\n        self.disableMouse()\n\n        # Load the background starfield.\n        self.setBackgroundColor((0, 0, 0, 1))\n        self.bg = loadObject("stars.jpg", scale=146, depth=200,\n                             transparency=False)\n\n        # Load the ship and set its initial velocity.\n        self.ship = loadObject("ship.png")\n        self.setVelocity(self.ship, LVector3.zero())\n\n        # A dictionary of what keys are currently being pressed\n        # The key events update this list, and our task will query it as input\n        self.keys = {"turnLeft": 0, "turnRight": 0,\n                     "accel": 0, "fire": 0}\n\n        #self.accept("escape", sys.exit)  # Escape quits\n        # Other keys events set the appropriate value in our key dictionary\n        self.accept("arrow_left",     self.setKey, ["turnLeft", 1])\n        self.accept("arrow_left-up",  self.setKey, ["turnLeft", 0])\n        self.accept("arrow_right",    self.setKey, ["turnRight", 1])\n        self.accept("arrow_right-up", self.setKey, ["turnRight", 0])\n        self.accept("arrow_up",       self.setKey, ["accel", 1])\n        self.accept("arrow_up-up",    self.setKey, ["accel", 0])\n        self.accept("space",          self.setKey, ["fire", 1])\n\n        # Now we create the task. taskMgr is the task manager that actually\n        # calls the function each frame. The add method creates a new task.\n        # The first argument is the function to be called, and the second\n        # argument is the name for the task.  It returns a task object which\n        # is passed to the function each frame.\n        self.gameTask = taskMgr.add(self.gameLoop, "gameLoop")\n\n        # Stores the time at which the next bullet may be fired.\n        self.nextBullet = 0.0\n\n        # This list will stored fired bullets.\n        self.bullets = []\n\n        # Complete initialization by spawning the asteroids.\n        self.spawnAsteroids()\n\n    # As described earlier, this simply sets a key in the self.keys dictionary\n    # to the given value.\n    def setKey(self, key, val):\n        self.keys[key] = val\n\n    def setVelocity(self, obj, val):\n        obj.setPythonTag("velocity", val)\n\n    def getVelocity(self, obj):\n        return obj.getPythonTag("velocity")\n\n    def setExpires(self, obj, val):\n        obj.setPythonTag("expires", val)\n\n    def getExpires(self, obj):\n        return obj.getPythonTag("expires")\n\n    def spawnAsteroids(self):\n        # Control variable for if the ship is alive\n        self.alive = True\n        self.asteroids = []  # List that will contain our asteroids\n\n        for i in range(10):\n            # This loads an asteroid. The texture chosen is random\n            # from "asteroid1.png" to "asteroid3.png".\n            asteroid = loadObject("asteroid%d.png" % (randint(1, 3)),\n                                  scale=AST_INIT_SCALE)\n            self.asteroids.append(asteroid)\n\n            # This is kind of a hack, but it keeps the asteroids from spawning\n            # near the player.  It creates the list (-20, -19 ... -5, 5, 6, 7,\n            # ... 20) and chooses a value from it. Since the player starts at 0\n            # and this list doesnt contain anything from -4 to 4, it wont be\n            # close to the player.\n            asteroid.setX(choice(tuple(range(-SCREEN_X, -5)) + tuple(range(5, SCREEN_X))))\n            # Same thing for Y\n            asteroid.setZ(choice(tuple(range(-SCREEN_Y, -5)) + tuple(range(5, SCREEN_Y))))\n\n            # Heading is a random angle in radians\n            heading = random() * 2 * pi\n\n            # Converts the heading to a vector and multiplies it by speed to\n            # get a velocity vector\n            v = LVector3(sin(heading), 0, cos(heading)) * AST_INIT_VEL\n            self.setVelocity(self.asteroids[i], v)\n\n    # This is our main task function, which does all of the per-frame\n    # processing.  It takes in self like all functions in a class, and task,\n    # the task object returned by taskMgr.\n    def gameLoop(self, task):\n        # Get the time elapsed since the next frame.  We need this for our\n        # distance and velocity calculations.\n        dt = globalClock.getDt()\n\n        # If the ship is not alive, do nothing.  Tasks return Task.cont to\n        # signify that the task should continue running. If Task.done were\n        # returned instead, the task would be removed and would no longer be\n        # called every frame.\n        if not self.alive:\n            return Task.cont\n\n        # update ship position\n        self.updateShip(dt)\n\n        # check to see if the ship can fire\n        if self.keys["fire"] and task.time > self.nextBullet:\n            self.fire(task.time)  # If so, call the fire function\n            # And disable firing for a bit\n            self.nextBullet = task.time + BULLET_REPEAT\n        # Remove the fire flag until the next spacebar press\n        self.keys["fire"] = 0\n\n        # update asteroids\n        for obj in self.asteroids:\n            self.updatePos(obj, dt)\n\n        # update bullets\n        newBulletArray = []\n        for obj in self.bullets:\n            self.updatePos(obj, dt)  # Update the bullet\n            # Bullets have an experation time (see definition of fire)\n            # If a bullet has not expired, add it to the new bullet list so\n            # that it will continue to exist.\n            if self.getExpires(obj) > task.time:\n                newBulletArray.append(obj)\n            else:\n                obj.removeNode()  # Otherwise, remove it from the scene.\n        # Set the bullet array to be the newly updated array\n        self.bullets = newBulletArray\n\n        # Check bullet collision with asteroids\n        # In short, it checks every bullet against every asteroid. This is\n        # quite slow.  A big optimization would be to sort the objects left to\n        # right and check only if they overlap.  Framerate can go way down if\n        # there are many bullets on screen, but for the most part its okay.\n        for bullet in self.bullets:\n            # This range statement makes it step though the asteroid list\n            # backwards.  This is because if an asteroid is removed, the\n            # elements after it will change position in the list.  If you go\n            # backwards, the length stays constant.\n            for i in range(len(self.asteroids) - 1, -1, -1):\n                asteroid = self.asteroids[i]\n                # Pandas collision detection is more complicated than we need\n                # here.  This is the basic sphere collision check. If the\n                # distance between the object centers is less than sum of the\n                # radii of the two objects, then we have a collision. We use\n                # lengthSquared() since it is faster than length().\n                if ((bullet.getPos() - asteroid.getPos()).lengthSquared() <\n                    (((bullet.getScale().getX() + asteroid.getScale().getX())\n                      * .5) ** 2)):\n                    # Schedule the bullet for removal\n                    self.setExpires(bullet, 0)\n                    self.asteroidHit(i)      # Handle the hit\n\n        # Now we do the same collision pass for the ship\n        shipSize = self.ship.getScale().getX()\n        for ast in self.asteroids:\n            # Same sphere collision check for the ship vs. the asteroid\n            if ((self.ship.getPos() - ast.getPos()).lengthSquared() <\n                    (((shipSize + ast.getScale().getX()) * .5) ** 2)):\n                # If there is a hit, clear the screen and schedule a restart\n                self.alive = False         # Ship is no longer alive\n                # Remove every object in asteroids and bullets from the scene\n                for i in self.asteroids + self.bullets:\n                    i.removeNode()\n                self.bullets = []          # Clear the bullet list\n                self.ship.hide()           # Hide the ship\n                # Reset the velocity\n                self.setVelocity(self.ship, LVector3(0, 0, 0))\n                Sequence(Wait(2),          # Wait 2 seconds\n                         Func(self.ship.setR, 0),  # Reset heading\n                         Func(self.ship.setX, 0),  # Reset position X\n                         # Reset position Y (Z for Panda)\n                         Func(self.ship.setZ, 0),\n                         Func(self.ship.show),     # Show the ship\n                         Func(self.spawnAsteroids)).start()  # Remake asteroids\n                return Task.cont\n\n        # If the player has successfully destroyed all asteroids, respawn them\n        if len(self.asteroids) == 0:\n            self.spawnAsteroids()\n\n        return Task.cont    # Since every return is Task.cont, the task will\n        # continue indefinitely\n\n    # Updates the positions of objects\n    def updatePos(self, obj, dt):\n        vel = self.getVelocity(obj)\n        newPos = obj.getPos() + (vel * dt)\n\n        # Check if the object is out of bounds. If so, wrap it\n        radius = .5 * obj.getScale().getX()\n        if newPos.getX() - radius > SCREEN_X:\n            newPos.setX(-SCREEN_X)\n        elif newPos.getX() + radius < -SCREEN_X:\n            newPos.setX(SCREEN_X)\n        if newPos.getZ() - radius > SCREEN_Y:\n            newPos.setZ(-SCREEN_Y)\n        elif newPos.getZ() + radius < -SCREEN_Y:\n            newPos.setZ(SCREEN_Y)\n\n        obj.setPos(newPos)\n\n    # The handler when an asteroid is hit by a bullet\n    def asteroidHit(self, index):\n        # If the asteroid is small it is simply removed\n        if self.asteroids[index].getScale().getX() <= AST_MIN_SCALE:\n            self.asteroids[index].removeNode()\n            # Remove the asteroid from the list of asteroids.\n            del self.asteroids[index]\n        else:\n            # If it is big enough, divide it up into little asteroids.\n            # First we update the current asteroid.\n            asteroid = self.asteroids[index]\n            newScale = asteroid.getScale().getX() * AST_SIZE_SCALE\n            asteroid.setScale(newScale)  # Rescale it\n\n            # The new direction is chosen as perpendicular to the old direction\n            # This is determined using the cross product, which returns a\n            # vector perpendicular to the two input vectors.  By crossing\n            # velocity with a vector that goes into the screen, we get a vector\n            # that is orthagonal to the original velocity in the screen plane.\n            vel = self.getVelocity(asteroid)\n            speed = vel.length() * AST_VEL_SCALE\n            vel.normalize()\n            vel = LVector3(0, 1, 0).cross(vel)\n            vel *= speed\n            self.setVelocity(asteroid, vel)\n\n            # Now we create a new asteroid identical to the current one\n            newAst = loadObject(scale=newScale)\n            self.setVelocity(newAst, vel * -1)\n            newAst.setPos(asteroid.getPos())\n            newAst.setTexture(asteroid.getTexture(), 1)\n            self.asteroids.append(newAst)\n\n    # This updates the ships position. This is similar to the general update\n    # but takes into account turn and thrust\n    def updateShip(self, dt):\n        heading = self.ship.getR()  # Heading is the roll value for this model\n        # Change heading if left or right is being pressed\n        if self.keys["turnRight"]:\n            heading += dt * TURN_RATE\n            self.ship.setR(heading % 360)\n        elif self.keys["turnLeft"]:\n            heading -= dt * TURN_RATE\n            self.ship.setR(heading % 360)\n\n        # Thrust causes acceleration in the direction the ship is currently\n        # facing\n        if self.keys["accel"]:\n            heading_rad = DEG_TO_RAD * heading\n            # This builds a new velocity vector and adds it to the current one\n            # relative to the camera, the screen in Panda is the XZ plane.\n            # Therefore all of our Y values in our velocities are 0 to signify\n            # no change in that direction.\n            newVel = \\\n                LVector3(sin(heading_rad), 0, cos(heading_rad)) * ACCELERATION * dt\n            newVel += self.getVelocity(self.ship)\n            # Clamps the new velocity to the maximum speed. lengthSquared() is\n            # used again since it is faster than length()\n            if newVel.lengthSquared() > MAX_VEL_SQ:\n                newVel.normalize()\n                newVel *= MAX_VEL\n            self.setVelocity(self.ship, newVel)\n\n        # Finally, update the position as with any other object\n        self.updatePos(self.ship, dt)\n\n    # Creates a bullet and adds it to the bullet list\n    def fire(self, time):\n        direction = DEG_TO_RAD * self.ship.getR()\n        pos = self.ship.getPos()\n        bullet = loadObject("bullet.png", scale=.2)  # Create the object\n        bullet.setPos(pos)\n        # Velocity is in relation to the ship\n        vel = (self.getVelocity(self.ship) +\n               (LVector3(sin(direction), 0, cos(direction)) *\n                BULLET_SPEED))\n        self.setVelocity(bullet, vel)\n        # Set the bullet expiration time to be a certain amount past the\n        # current time\n        self.setExpires(bullet, time + BULLET_LIFE)\n\n        # Finally, add the new bullet to the list\n        self.bullets.append(bullet)\n\n# We now have everything we need. Make an instance of the class and start\n# 3D rendering\ndemo = AsteroidsDemo()\ndemo.run()\n',
@@ -300,11 +351,9 @@
       'browser_fetch_api': 'from browser import Object, fetch\n\nasync def fetchroutine(url):\n    # optional options object\n    options = Object()\n    options.method = "GET"\n\n    response = await fetch(url, options)\n    if response.ok:\n        print(await response.text())\n    else:\n        print("Error", response.status)\n\n\nfrom direct.showbase.ShowBase import ShowBase\n\nbase = ShowBase()\nbase.taskMgr.add(fetchroutine("./test.txt"))\nbase.taskMgr.add(fetchroutine("./test2.txt"))\nbase.run()\n'
     };
 
-    // --- ADDED LOAD SAMPLE FUNCTION ---
     function loadSample(sampleName) {
       if (samples[sampleName]) {
         editor.setValue(samples[sampleName]);
-        // Close the menu after selecting
         document.getElementById('menu-samples').classList.remove('open');
       }
     }
@@ -404,7 +453,6 @@
       document.getElementById(id).classList.toggle('open');
     }
 
-    // Close menus when clicking outside
     document.addEventListener('click', function(e) {
       if (!e.target.closest('.menu-btn')) {
         document.querySelectorAll('.menu-btn').forEach(function(btn) {
@@ -416,37 +464,34 @@
 </head>
 
 <body>
+  
+  <div class="scanlines"></div>
 
   <div id="header">
-    <!-- Left: File / Edit menus -->
     <div id="header-left">
-
       <button class="menu-btn" id="menu-file" onclick="toggleMenu('menu-file')">
         File
         <div class="menu-dropdown" id="dropdown-file">
-          <a onclick="newFile()">New</a>
-          <a onclick="openFile()">Open...</a>
-          <a onclick="saveFile()">Save</a>
+          <a onclick="newFile()">[+] New</a>
+          <a onclick="openFile()">[>] Open...</a>
+          <a onclick="saveFile()">[s] Save</a>
           <div class="separator"></div>
-          <a onclick="resetToDefault()">Reset to default</a>
+          <a onclick="resetToDefault()">[x] Reset</a>
           <div class="separator"></div>
-          <a onclick="includeAssets()">Include assets...</a>
+          <a onclick="includeAssets()">[^] Assets...</a>
         </div>
       </button>
 
       <button class="menu-btn" id="menu-edit" onclick="toggleMenu('menu-edit')">
         Edit
         <div class="menu-dropdown" id="dropdown-edit">
-          <a onclick="editor.execCommand('undo')">Undo</a>
-          <a onclick="editor.execCommand('redo')">Redo</a>
+          <a onclick="editor.execCommand('undo')">[<] Undo</a>
+          <a onclick="editor.execCommand('redo')">[>] Redo</a>
           <div class="separator"></div>
-          <a onclick="editor.execCommand('selectall')">Select All</a>
-          <div class="separator"></div>
-          <a onclick="editor.setTheme(prompt('Enter a theme'))">Change Theme</a>
+          <a onclick="editor.execCommand('selectall')">[*] Select All</a>
         </div>
       </button>
 
-      <!-- ADDED SAMPLES DROPDOWN MENU -->
       <button class="menu-btn" id="menu-samples" onclick="toggleMenu('menu-samples')">
         Samples
         <div class="menu-dropdown" id="dropdown-samples">
@@ -460,67 +505,42 @@
           <a onclick="loadSample('browser_fetch_api')">browser_fetch_api.py</a>
         </div>
       </button>
-
     </div>
 
-    <!-- Right: action buttons -->
     <div id="header-right">
       <button id="play-button" onclick="runCode()" disabled>
-        <i class="fa fa-play"></i> Run Code
+        [ RUN ]
       </button>
       <button id="stop-button" onclick="stopCode()" disabled>
-        <i class="fa fa-stop"></i> Stop
+        [ HALT ]
       </button>
       <button id="fullscreen-button" onclick="toggleCanvasFullscreen()" disabled>
-        <i class="fa fa-arrows-alt"></i> Fullscreen
+        [ FULLSCREEN ]
       </button>
     </div>
-
   </div>
 
-  <!-- ── Main area (flex row) ── -->
   <div id="main-area">
-
-  <!-- ── Left panel ── -->
-  <div id="panel-output">
-
-    <!-- Canvas container -->
-    <div id="main">
-      <!-- Loading overlay -->
-      <div id="overlay">
-        <img id="logo-overlay" src="logo.png" alt="Panda3D Editor">
-        <div id="center-ui">
-          <div class="spinner" id="spinner"></div>
-          <div id="status">Loading...</div>
-          <div id="ldbar-outer"><div id="ldbar"></div></div>
+    <div id="panel-output">
+      <div id="main">
+        <div id="overlay">
+          <div id="center-ui">
+            <div id="status" class="blinking-text">INITIALIZING...</div>
+            <div id="ldbar-outer"><div id="ldbar"></div></div>
+          </div>
         </div>
+        <canvas id="canvas" style="display:none;" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
       </div>
-
-      <!-- Panda3D canvas -->
-      <canvas id="canvas"
-              style="display:none;"
-              oncontextmenu="event.preventDefault()"
-              tabindex="-1"></canvas>
+      <div id="console"></div>
     </div>
-
-    <!-- Python console output -->
-    <div id="console" class="ace_editor ace-monokai ace_scroller"></div>
-
+    
+    <div id="panel-input">
+      <pre id="editor"></pre>
+    </div>
   </div>
 
-  <!-- ── Right panel: Ace editor ── -->
-  <div id="panel-input">
-    <pre id="editor"></pre>
-  </div>
-
-  </div><!-- /#main-area -->
-
-  <!-- ── Credits ── -->
   <div id="credits">
-    Powered by&nbsp;
-    <a href="https://www.panda3d.org/" target="_blank">Panda3D</a>,&nbsp;
-    <a href="https://kripken.github.io/emscripten-site/" target="_blank">Emscripten</a>&nbsp;and&nbsp;
-    <a href="https://ace.c9.io/" target="_blank">Ace</a>
+    POWERED BY PANDA3D // EMSCRIPTEN // ACE
   </div>
 
   <!-- ── Ace editor init ── -->
@@ -530,7 +550,8 @@
       localStorage.getItem("editor-contents") || defaultCode;
 
     var editor = ace.edit("editor");
-    editor.setTheme("ace/theme/monokai");
+    // Switch to Ace's built-in terminal theme to match our aesthetic
+    editor.setTheme("ace/theme/terminal");
     editor.session.setMode("ace/mode/python");
     editor.setShowPrintMargin(false);
     editor.session.on('change', function() {
@@ -538,13 +559,20 @@
     });
   </script>
 
-  <!-- ── Emscripten Module + loader ── -->
+  <script>
+    Split(['#panel-output', '#panel-input'], {
+      sizes: [50, 50],
+      minSize: 300,
+      gutterSize: 8,
+      cursor: 'col-resize'
+    });
+  </script>
+
   <script type="text/javascript">
     var EMSCRIPTEN_ASM = 'editor.js';
     var ASM_SIZE = 352844;
 
     var statusElement  = document.getElementById("status");
-    var spinnerElement = document.getElementById("spinner");
     var ldbar          = document.getElementById("ldbar");
 
     var Module = {
@@ -559,7 +587,7 @@
         return function(text) {
           if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
           text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          el.innerHTML += '<samp>' + text + '\n</samp>';
+          el.innerHTML += '<samp>> ' + text + '\n</samp>';
           el.scrollTop = el.scrollHeight;
         };
       })(),
@@ -581,8 +609,8 @@
             cls = 'error';
           }
           el.innerHTML += cls
-            ? '<samp class="' + cls + '">' + text + '\n</samp>'
-            : '<samp>' + text + '\n</samp>';
+            ? '<samp class="' + cls + '">> ' + text + '\n</samp>'
+            : '<samp>> ' + text + '\n</samp>';
           el.scrollTop = el.scrollHeight;
         };
       })(),
@@ -607,17 +635,15 @@
         Module.setStatus.last.text = text;
 
         if (match) {
-          statusElement.innerHTML    = match[1];
+          statusElement.innerHTML    = "LOADING ASSETS...";
           ldbar.style.width          = (100 * parseInt(match[2]) / parseInt(match[4])) + '%';
-          spinnerElement.style.display = '';
         } else {
-          if (!text) spinnerElement.style.display = 'none';
-          statusElement.innerHTML = text;
+          statusElement.innerHTML = text.toUpperCase();
         }
 
         if (text === 'Done!') {
-          statusElement.innerHTML = 'Click "Run Code" to begin.';
-          spinnerElement.style.display = 'none';
+          statusElement.innerHTML = 'READY.';
+          statusElement.classList.remove('blinking-text');
           document.getElementById('ldbar-outer').style.display = 'none';
           document.getElementById('play-button').disabled       = false;
           document.getElementById('stop-button').disabled       = false;
@@ -629,24 +655,22 @@
       monitorRunDependencies: function(left) {
         this.totalDependencies = Math.max(this.totalDependencies, left);
         Module.setStatus(left
-          ? 'Preparing... (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')'
-          : 'All downloads complete.');
+          ? 'LINKING... (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')'
+          : 'LINKING COMPLETE.');
       }
     };
 
-    Module.setStatus('Downloading...');
+    Module.setStatus('AWAITING CONNECTION...');
 
     window.onerror = function() {
-      Module.setStatus('Exception thrown, see JavaScript console');
-      spinnerElement.style.display = 'none';
+      Module.setStatus('FATAL SYSTEM ERROR');
       Module.setStatus = function(t) {
         if (t) Module.printErr('[post-exception status] ' + t);
       };
     };
 
-    // Load the Emscripten asm.js bundle
     (function sendreq() {
-      statusElement.innerHTML = "Downloading application...";
+      statusElement.innerHTML = "DOWNLOADING KERNEL...";
       var req = new XMLHttpRequest();
       req.onprogress = function(evt) {
         ldbar.style.width = ((evt.loaded / ASM_SIZE) * 100) + '%';
@@ -654,7 +678,7 @@
       req.open('GET', EMSCRIPTEN_ASM, true);
       req.onreadystatechange = function() {
         if (req.readyState === 4) {
-          Module.setStatus("Loading...");
+          Module.setStatus("BOOTING KERNEL...");
           setTimeout(function() {
             var blob   = new Blob([req.responseText], { type: 'text/javascript' });
             var script = document.createElement("script");
@@ -669,6 +693,5 @@
       req.send();
     })();
   </script>
-
 </body>
 </html>
