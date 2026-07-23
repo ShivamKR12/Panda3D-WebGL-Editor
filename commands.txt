@@ -27,18 +27,18 @@ cd ..
 python3.12 makepanda/makepanda.py --nothing --use-python --use-vorbis --use-bullet --use-zlib --use-freetype --use-harfbuzz --use-openal --no-png --use-direct --use-gles2 --optimize 4 --static --target emscripten --threads 4
 
 cd editor
-( change the thirdparty dir and the panda built dir to the correct PATHS )
+(change the thirdparty dir and the panda built dir to the correct PATHS in freezify.py)
 python3.12 -OO freezify.py
-( choose either the python server or the npm server )
+(choose either the python server or the npm server)
 python -m http.server
 npm install -g http-server
 http-server
 cd ..
 
 cd roaming-ralph
-( change the thirdparty dir and the panda built dir to the correct PATHS )
+(change the thirdparty dir and the panda built dir to the correct PATHS in freezify.py)
 python3.12 -OO freezify.py
-( choose either the python server or the npm server )
+(choose either the python server or the npm server)
 python -m http.server
 npm install -g http-server
 http-server
