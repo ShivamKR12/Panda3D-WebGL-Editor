@@ -331,6 +331,22 @@
       overflow: hidden;
     }
 
+    #dropzone {
+      display: none;
+      position: absolute;
+      inset: 0;
+      z-index: 9998; /* Below scanlines, above the editor */
+      background: rgba(5, 5, 5, 0.85);
+      border: 4px dashed var(--fg-primary);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--fg-primary);
+      font-size: 40px;
+      text-shadow: var(--crt-glow);
+    }
+    #dropzone.active { display: flex; }
+
     #credits {
       position: fixed;
       bottom: 0; left: 0; right: 0;
@@ -347,6 +363,82 @@
   </style>
 
   <script type="text/javascript">
+    let openFiles = ['/main.py'];
+    let currentOpenFile = '/main.py';
+
+    function buildFileTree(dir, level=0) {
+      let html = '';
+      try {
+        let items = FS.readdir(dir);
+        // Ignore internal emscripten root folders to keep it clean
+        let skip = ['.', '..', 'dev', 'proc', 'tmp', 'home'];
+        
+        for (let item of items) {
+          if (level === 0 && skip.includes(item)) continue;
+          
+          let path = dir === '/' ? '/' + item : dir + '/' + item;
+          let stat = FS.stat(path);
+          let indent = '&nbsp;&nbsp;'.repeat(level);
+          
+          if (FS.isDir(stat.mode)) {
+            html += `<div class="file-item" style="color: var(--fg-secondary); cursor: default;"><b>${indent}[+] ${item}/</b></div>`;
+            html += buildFileTree(path, level + 1); // Recursive call for nested folders
+          } else {
+            let activeClass = (path === currentOpenFile) ? 'active' : '';
+            html += `<div class="file-item ${activeClass}" onclick="openFileFromFS('${path}')">${indent}|-- ${item}</div>`;
+          }
+        }
+      } catch (e) { console.error("Error reading FS:", e); }
+      return html;
+    }
+
+    function refreshSidebar() {
+      if (typeof FS === 'undefined') return;
+      document.getElementById('file-tree').innerHTML = buildFileTree('/');
+    }
+
+    function updateTabs() {
+      let html = '';
+      openFiles.forEach(path => {
+        let filename = path.split('/').pop();
+        let activeClass = (path === currentOpenFile) ? 'active' : '';
+        html += `<div class="tab ${activeClass}" onclick="openFileFromFS('${path}')">${filename} <span style="margin-left:8px; cursor:pointer;" onclick="event.stopPropagation(); closeTab('${path}')">[x]</span></div>`;
+      });
+      document.getElementById('editor-tabs').innerHTML = html;
+    }
+
+    function closeTab(path) {
+      openFiles = openFiles.filter(p => p !== path);
+      if (openFiles.length === 0) {
+        newFile(); // If last tab is closed, prompt for a new one
+      } else if (currentOpenFile === path) {
+        openFileFromFS(openFiles[openFiles.length - 1]); // Switch to the last remaining tab
+      } else {
+        updateTabs();
+      }
+    }
+
+    function openFileFromFS(path) {
+      try {
+        // Prevent binary files from breaking the Ace text parser
+        if (path.match(/\.(png|jpg|jpeg|bam|ogg|wav)$/i)) {
+           term.writeln(`\x1b[1;33m> CANNOT OPEN BINARY ASSET IN TEXT EDITOR: ${path}\x1b[0m`);
+           return;
+        }
+        if (!openFiles.includes(path)) {
+          openFiles.push(path);
+        }
+        let content = FS.readFile(path, { encoding: 'utf8' });
+        currentOpenFile = path;
+        editor.setValue(content, -1);
+        updateTabs();
+        refreshSidebar();
+        term.writeln(`\x1b[1;32m> OPENED: ${path}\x1b[0m`);
+      } catch(e) {
+        term.writeln(`\x1b[1;31m> ERROR READING FILE: ${path}\x1b[0m`);
+      }
+    }
+    
     var samples = {
       'hello_world': 'from math import pi, sin, cos\n\nfrom direct.showbase.ShowBase import ShowBase\nfrom direct.task import Task\nfrom direct.actor.Actor import Actor\nfrom direct.interval.IntervalGlobal import Sequence\nfrom panda3d.core import Point3\n\nclass MyApp(ShowBase):\n    def __init__(self):\n        ShowBase.__init__(self)\n\n        # Disable the camera trackball controls.\n        self.disableMouse()\n\n        # Load the environment model.\n        self.scene = self.loader.loadModel("models/environment.bam")\n        # Reparent the model to render.\n        self.scene.reparentTo(self.render)\n        # Apply scale and position transforms on the model.\n        self.scene.setScale(0.25, 0.25, 0.25)\n        self.scene.setPos(-8, 42, 0)\n\n        # Add the spinCameraTask procedure to the task manager.\n        self.taskMgr.add(self.spinCameraTask, "SpinCameraTask")\n\n        # Load and transform the panda actor.\n        self.pandaActor = Actor("models/panda-model.bam",\n                                {"walk": "models/panda-walk4.bam"})\n        self.pandaActor.setScale(0.005, 0.005, 0.005)\n        self.pandaActor.reparentTo(self.render)\n        # Loop its animation.\n        self.pandaActor.loop("walk")\n\n        # Create the four lerp intervals needed for the panda to\n        # walk back and forth.\n        pandaPosInterval1 = self.pandaActor.posInterval(13,\n                                                        Point3(0, -10, 0),\n                                                        startPos=Point3(0, 10, 0))\n        pandaPosInterval2 = self.pandaActor.posInterval(13,\n                                                        Point3(0, 10, 0),\n                                                        startPos=Point3(0, -10, 0))\n        pandaHprInterval1 = self.pandaActor.hprInterval(3,\n                                                        Point3(180, 0, 0),\n                                                        startHpr=Point3(0, 0, 0))\n        pandaHprInterval2 = self.pandaActor.hprInterval(3,\n                                                        Point3(0, 0, 0),\n                                                        startHpr=Point3(180, 0, 0))\n\n        # Create and play the sequence that coordinates the intervals.\n        self.pandaPace = Sequence(pandaPosInterval1,\n                                  pandaHprInterval1,\n                                  pandaPosInterval2,\n                                  pandaHprInterval2,\n                                  name="pandaPace")\n        self.pandaPace.loop()\n\n    # Define a procedure to move the camera.\n    def spinCameraTask(self, task):\n        angleDegrees = task.time * 6.0\n        angleRadians = angleDegrees * (pi / 180.0)\n        self.camera.setPos(20 * sin(angleRadians), -20.0 * cos(angleRadians), 3)\n        self.camera.setHpr(angleDegrees, -10, 0)\n        return Task.cont\n\napp = MyApp()\napp.run()\n',
       'asteroids': '#!/usr/bin/env python\n\n# Author: Shao Zhang, Phil Saltzman, and Greg Lindley\n# Last Updated: 2015-03-13\n#\n# This tutorial demonstrates the use of tasks. A task is a function that\n# gets called once every frame. They are good for things that need to be\n# updated very often. In the case of asteroids, we use tasks to update\n# the positions of all the objects, and to check if the bullets or the\n# ship have hit the asteroids.\n#\n# Note: This definitely a complicated example. Tasks are the cores of\n# most games so it seemed appropriate to show what a full game in Panda\n# could look like.\n\nfrom direct.showbase.ShowBase import ShowBase\nfrom panda3d.core import TextNode, TransparencyAttrib\nfrom panda3d.core import LPoint3, LVector3\nfrom direct.gui.OnscreenText import OnscreenText\nfrom direct.task.Task import Task\nfrom math import sin, cos, pi\nfrom random import randint, choice, random\nfrom direct.interval.MetaInterval import Sequence\nfrom direct.interval.FunctionInterval import Wait, Func\nimport sys\n\n# Constants that will control the behavior of the game. It is good to\n# group constants like this so that they can be changed once without\n# having to find everywhere they are used in code\nSPRITE_POS = 55     # At default field of view and a depth of 55, the screen\n# dimensions is 40x30 units\nSCREEN_X = 20       # Screen goes from -20 to 20 on X\nSCREEN_Y = 15       # Screen goes from -15 to 15 on Y\nTURN_RATE = 360     # Degrees ship can turn in 1 second\nACCELERATION = 10   # Ship acceleration in units/sec/sec\nMAX_VEL = 6         # Maximum ship velocity in units/sec\nMAX_VEL_SQ = MAX_VEL ** 2  # Square of the ship velocity\nDEG_TO_RAD = pi / 180  # translates degrees to radians for sin and cos\nBULLET_LIFE = 2     # How long bullets stay on screen before removed\nBULLET_REPEAT = .2  # How often bullets can be fired\nBULLET_SPEED = 10   # Speed bullets move\nAST_INIT_VEL = 1    # Velocity of the largest asteroids\nAST_INIT_SCALE = 3  # Initial asteroid scale\nAST_VEL_SCALE = 2.2  # How much asteroid speed multiplies when broken up\nAST_SIZE_SCALE = .6  # How much asteroid scale changes when broken up\nAST_MIN_SCALE = 1.1  # If and asteroid is smaller than this and is hit,\n# it disappears instead of splitting up\n\n# This helps reduce the amount of code used by loading objects, since all of\n# the objects are pretty much the same.\ndef loadObject(tex=None, pos=LPoint3(0, 0), depth=SPRITE_POS, scale=1,\n               transparency=True):\n    # Every object uses the plane model and is parented to the camera\n    # so that it faces the screen.\n    obj = loader.loadModel("models/plane.bam")\n    obj.reparentTo(camera)\n\n    # Set the initial position and scale.\n    obj.setPos(pos.getX(), depth, pos.getY())\n    obj.setScale(scale)\n\n    # This tells Panda not to worry about the order that things are drawn in\n    # (ie. disable Z-testing).  This prevents an effect known as Z-fighting.\n    obj.setBin("unsorted", 0)\n    obj.setDepthTest(False)\n\n    if transparency:\n        # Enable transparency blending.\n        obj.setTransparency(TransparencyAttrib.MAlpha)\n\n    if tex:\n        # Load and set the requested texture.\n        tex = loader.loadTexture("textures/" + tex)\n        obj.setTexture(tex, 1)\n\n    return obj\n\n\n# Macro-like function used to reduce the amount to code needed to create the\n# on screen instructions\ndef genLabelText(text, i):\n    return OnscreenText(text=text, parent=base.a2dTopLeft, pos=(0.07, -.06 * i - 0.1),\n                        fg=(1, 1, 1, 1), align=TextNode.ALeft, shadow=(0, 0, 0, 0.5), scale=.05)\n\n\nclass AsteroidsDemo(ShowBase):\n\n    def __init__(self):\n        # Initialize the ShowBase class from which we inherit, which will\n        # create a window and set up everything we need for rendering into it.\n        ShowBase.__init__(self)\n\n        # This code puts the standard title and instruction text on screen\n        self.title = OnscreenText(text="Panda3D: Tutorial - Tasks",\n                                  parent=base.a2dBottomRight, scale=.07,\n                                  align=TextNode.ARight, pos=(-0.1, 0.1),\n                                  fg=(1, 1, 1, 1), shadow=(0, 0, 0, 0.5))\n        self.escapeText = genLabelText("ESC: Quit", 0)\n        self.leftkeyText = genLabelText("[Left Arrow]: Turn Left (CCW)", 1)\n        self.rightkeyText = genLabelText("[Right Arrow]: Turn Right (CW)", 2)\n        self.upkeyText = genLabelText("[Up Arrow]: Accelerate", 3)\n        self.spacekeyText = genLabelText("[Space Bar]: Fire", 4)\n\n        # Disable default mouse-based camera control.  This is a method on the\n        # ShowBase class from which we inherit.\n        self.disableMouse()\n\n        # Load the background starfield.\n        self.setBackgroundColor((0, 0, 0, 1))\n        self.bg = loadObject("stars.jpg", scale=146, depth=200,\n                             transparency=False)\n\n        # Load the ship and set its initial velocity.\n        self.ship = loadObject("ship.png")\n        self.setVelocity(self.ship, LVector3.zero())\n\n        # A dictionary of what keys are currently being pressed\n        # The key events update this list, and our task will query it as input\n        self.keys = {"turnLeft": 0, "turnRight": 0,\n                     "accel": 0, "fire": 0}\n\n        #self.accept("escape", sys.exit)  # Escape quits\n        # Other keys events set the appropriate value in our key dictionary\n        self.accept("arrow_left",     self.setKey, ["turnLeft", 1])\n        self.accept("arrow_left-up",  self.setKey, ["turnLeft", 0])\n        self.accept("arrow_right",    self.setKey, ["turnRight", 1])\n        self.accept("arrow_right-up", self.setKey, ["turnRight", 0])\n        self.accept("arrow_up",       self.setKey, ["accel", 1])\n        self.accept("arrow_up-up",    self.setKey, ["accel", 0])\n        self.accept("space",          self.setKey, ["fire", 1])\n\n        # Now we create the task. taskMgr is the task manager that actually\n        # calls the function each frame. The add method creates a new task.\n        # The first argument is the function to be called, and the second\n        # argument is the name for the task.  It returns a task object which\n        # is passed to the function each frame.\n        self.gameTask = taskMgr.add(self.gameLoop, "gameLoop")\n\n        # Stores the time at which the next bullet may be fired.\n        self.nextBullet = 0.0\n\n        # This list will stored fired bullets.\n        self.bullets = []\n\n        # Complete initialization by spawning the asteroids.\n        self.spawnAsteroids()\n\n    # As described earlier, this simply sets a key in the self.keys dictionary\n    # to the given value.\n    def setKey(self, key, val):\n        self.keys[key] = val\n\n    def setVelocity(self, obj, val):\n        obj.setPythonTag("velocity", val)\n\n    def getVelocity(self, obj):\n        return obj.getPythonTag("velocity")\n\n    def setExpires(self, obj, val):\n        obj.setPythonTag("expires", val)\n\n    def getExpires(self, obj):\n        return obj.getPythonTag("expires")\n\n    def spawnAsteroids(self):\n        # Control variable for if the ship is alive\n        self.alive = True\n        self.asteroids = []  # List that will contain our asteroids\n\n        for i in range(10):\n            # This loads an asteroid. The texture chosen is random\n            # from "asteroid1.png" to "asteroid3.png".\n            asteroid = loadObject("asteroid%d.png" % (randint(1, 3)),\n                                  scale=AST_INIT_SCALE)\n            self.asteroids.append(asteroid)\n\n            # This is kind of a hack, but it keeps the asteroids from spawning\n            # near the player.  It creates the list (-20, -19 ... -5, 5, 6, 7,\n            # ... 20) and chooses a value from it. Since the player starts at 0\n            # and this list doesnt contain anything from -4 to 4, it wont be\n            # close to the player.\n            asteroid.setX(choice(tuple(range(-SCREEN_X, -5)) + tuple(range(5, SCREEN_X))))\n            # Same thing for Y\n            asteroid.setZ(choice(tuple(range(-SCREEN_Y, -5)) + tuple(range(5, SCREEN_Y))))\n\n            # Heading is a random angle in radians\n            heading = random() * 2 * pi\n\n            # Converts the heading to a vector and multiplies it by speed to\n            # get a velocity vector\n            v = LVector3(sin(heading), 0, cos(heading)) * AST_INIT_VEL\n            self.setVelocity(self.asteroids[i], v)\n\n    # This is our main task function, which does all of the per-frame\n    # processing.  It takes in self like all functions in a class, and task,\n    # the task object returned by taskMgr.\n    def gameLoop(self, task):\n        # Get the time elapsed since the next frame.  We need this for our\n        # distance and velocity calculations.\n        dt = globalClock.getDt()\n\n        # If the ship is not alive, do nothing.  Tasks return Task.cont to\n        # signify that the task should continue running. If Task.done were\n        # returned instead, the task would be removed and would no longer be\n        # called every frame.\n        if not self.alive:\n            return Task.cont\n\n        # update ship position\n        self.updateShip(dt)\n\n        # check to see if the ship can fire\n        if self.keys["fire"] and task.time > self.nextBullet:\n            self.fire(task.time)  # If so, call the fire function\n            # And disable firing for a bit\n            self.nextBullet = task.time + BULLET_REPEAT\n        # Remove the fire flag until the next spacebar press\n        self.keys["fire"] = 0\n\n        # update asteroids\n        for obj in self.asteroids:\n            self.updatePos(obj, dt)\n\n        # update bullets\n        newBulletArray = []\n        for obj in self.bullets:\n            self.updatePos(obj, dt)  # Update the bullet\n            # Bullets have an experation time (see definition of fire)\n            # If a bullet has not expired, add it to the new bullet list so\n            # that it will continue to exist.\n            if self.getExpires(obj) > task.time:\n                newBulletArray.append(obj)\n            else:\n                obj.removeNode()  # Otherwise, remove it from the scene.\n        # Set the bullet array to be the newly updated array\n        self.bullets = newBulletArray\n\n        # Check bullet collision with asteroids\n        # In short, it checks every bullet against every asteroid. This is\n        # quite slow.  A big optimization would be to sort the objects left to\n        # right and check only if they overlap.  Framerate can go way down if\n        # there are many bullets on screen, but for the most part its okay.\n        for bullet in self.bullets:\n            # This range statement makes it step though the asteroid list\n            # backwards.  This is because if an asteroid is removed, the\n            # elements after it will change position in the list.  If you go\n            # backwards, the length stays constant.\n            for i in range(len(self.asteroids) - 1, -1, -1):\n                asteroid = self.asteroids[i]\n                # Pandas collision detection is more complicated than we need\n                # here.  This is the basic sphere collision check. If the\n                # distance between the object centers is less than sum of the\n                # radii of the two objects, then we have a collision. We use\n                # lengthSquared() since it is faster than length().\n                if ((bullet.getPos() - asteroid.getPos()).lengthSquared() <\n                    (((bullet.getScale().getX() + asteroid.getScale().getX())\n                      * .5) ** 2)):\n                    # Schedule the bullet for removal\n                    self.setExpires(bullet, 0)\n                    self.asteroidHit(i)      # Handle the hit\n\n        # Now we do the same collision pass for the ship\n        shipSize = self.ship.getScale().getX()\n        for ast in self.asteroids:\n            # Same sphere collision check for the ship vs. the asteroid\n            if ((self.ship.getPos() - ast.getPos()).lengthSquared() <\n                    (((shipSize + ast.getScale().getX()) * .5) ** 2)):\n                # If there is a hit, clear the screen and schedule a restart\n                self.alive = False         # Ship is no longer alive\n                # Remove every object in asteroids and bullets from the scene\n                for i in self.asteroids + self.bullets:\n                    i.removeNode()\n                self.bullets = []          # Clear the bullet list\n                self.ship.hide()           # Hide the ship\n                # Reset the velocity\n                self.setVelocity(self.ship, LVector3(0, 0, 0))\n                Sequence(Wait(2),          # Wait 2 seconds\n                         Func(self.ship.setR, 0),  # Reset heading\n                         Func(self.ship.setX, 0),  # Reset position X\n                         # Reset position Y (Z for Panda)\n                         Func(self.ship.setZ, 0),\n                         Func(self.ship.show),     # Show the ship\n                         Func(self.spawnAsteroids)).start()  # Remake asteroids\n                return Task.cont\n\n        # If the player has successfully destroyed all asteroids, respawn them\n        if len(self.asteroids) == 0:\n            self.spawnAsteroids()\n\n        return Task.cont    # Since every return is Task.cont, the task will\n        # continue indefinitely\n\n    # Updates the positions of objects\n    def updatePos(self, obj, dt):\n        vel = self.getVelocity(obj)\n        newPos = obj.getPos() + (vel * dt)\n\n        # Check if the object is out of bounds. If so, wrap it\n        radius = .5 * obj.getScale().getX()\n        if newPos.getX() - radius > SCREEN_X:\n            newPos.setX(-SCREEN_X)\n        elif newPos.getX() + radius < -SCREEN_X:\n            newPos.setX(SCREEN_X)\n        if newPos.getZ() - radius > SCREEN_Y:\n            newPos.setZ(-SCREEN_Y)\n        elif newPos.getZ() + radius < -SCREEN_Y:\n            newPos.setZ(SCREEN_Y)\n\n        obj.setPos(newPos)\n\n    # The handler when an asteroid is hit by a bullet\n    def asteroidHit(self, index):\n        # If the asteroid is small it is simply removed\n        if self.asteroids[index].getScale().getX() <= AST_MIN_SCALE:\n            self.asteroids[index].removeNode()\n            # Remove the asteroid from the list of asteroids.\n            del self.asteroids[index]\n        else:\n            # If it is big enough, divide it up into little asteroids.\n            # First we update the current asteroid.\n            asteroid = self.asteroids[index]\n            newScale = asteroid.getScale().getX() * AST_SIZE_SCALE\n            asteroid.setScale(newScale)  # Rescale it\n\n            # The new direction is chosen as perpendicular to the old direction\n            # This is determined using the cross product, which returns a\n            # vector perpendicular to the two input vectors.  By crossing\n            # velocity with a vector that goes into the screen, we get a vector\n            # that is orthagonal to the original velocity in the screen plane.\n            vel = self.getVelocity(asteroid)\n            speed = vel.length() * AST_VEL_SCALE\n            vel.normalize()\n            vel = LVector3(0, 1, 0).cross(vel)\n            vel *= speed\n            self.setVelocity(asteroid, vel)\n\n            # Now we create a new asteroid identical to the current one\n            newAst = loadObject(scale=newScale)\n            self.setVelocity(newAst, vel * -1)\n            newAst.setPos(asteroid.getPos())\n            newAst.setTexture(asteroid.getTexture(), 1)\n            self.asteroids.append(newAst)\n\n    # This updates the ships position. This is similar to the general update\n    # but takes into account turn and thrust\n    def updateShip(self, dt):\n        heading = self.ship.getR()  # Heading is the roll value for this model\n        # Change heading if left or right is being pressed\n        if self.keys["turnRight"]:\n            heading += dt * TURN_RATE\n            self.ship.setR(heading % 360)\n        elif self.keys["turnLeft"]:\n            heading -= dt * TURN_RATE\n            self.ship.setR(heading % 360)\n\n        # Thrust causes acceleration in the direction the ship is currently\n        # facing\n        if self.keys["accel"]:\n            heading_rad = DEG_TO_RAD * heading\n            # This builds a new velocity vector and adds it to the current one\n            # relative to the camera, the screen in Panda is the XZ plane.\n            # Therefore all of our Y values in our velocities are 0 to signify\n            # no change in that direction.\n            newVel = \\\n                LVector3(sin(heading_rad), 0, cos(heading_rad)) * ACCELERATION * dt\n            newVel += self.getVelocity(self.ship)\n            # Clamps the new velocity to the maximum speed. lengthSquared() is\n            # used again since it is faster than length()\n            if newVel.lengthSquared() > MAX_VEL_SQ:\n                newVel.normalize()\n                newVel *= MAX_VEL\n            self.setVelocity(self.ship, newVel)\n\n        # Finally, update the position as with any other object\n        self.updatePos(self.ship, dt)\n\n    # Creates a bullet and adds it to the bullet list\n    def fire(self, time):\n        direction = DEG_TO_RAD * self.ship.getR()\n        pos = self.ship.getPos()\n        bullet = loadObject("bullet.png", scale=.2)  # Create the object\n        bullet.setPos(pos)\n        # Velocity is in relation to the ship\n        vel = (self.getVelocity(self.ship) +\n               (LVector3(sin(direction), 0, cos(direction)) *\n                BULLET_SPEED))\n        self.setVelocity(bullet, vel)\n        # Set the bullet expiration time to be a certain amount past the\n        # current time\n        self.setExpires(bullet, time + BULLET_LIFE)\n\n        # Finally, add the new bullet to the list\n        self.bullets.append(bullet)\n\n# We now have everything we need. Make an instance of the class and start\n# 3D rendering\ndemo = AsteroidsDemo()\ndemo.run()\n',
@@ -362,7 +454,11 @@
 
     function loadSample(sampleName) {
       if (samples[sampleName]) {
-        editor.setValue(samples[sampleName]);
+        let code = samples[sampleName];
+        editor.setValue(code, -1);
+        if (typeof FS !== 'undefined') {
+          FS.writeFile(currentOpenFile, code);
+        }
         document.getElementById('menu-samples').classList.remove('open');
       }
     }
@@ -375,12 +471,13 @@
       stopFunc();
 
       term.clear();
-      term.writeln('\x1b[1;32m> EXECUTING MAIN.PY...\x1b[0m');
+      term.writeln(`\x1b[1;32m> EXECUTING ${currentOpenFile}...\x1b[0m`);
       
       var runFunc = Module.cwrap('runPythonCode', 'number', ['string'], {async: true});
+      // Always run whatever is currently in the active editor buffer
       runFunc(editor.getValue());
     }
-
+    
     function stopCode() {
       var stopFunc = Module.cwrap('stopPythonCode', 'number');
       stopFunc();
@@ -405,24 +502,39 @@
     });
 
     function newFile() {
-      editor.setValue('');
-      editor.focus();
+      let filename = prompt("Enter new filename (e.g. script.py):");
+      if (filename && typeof FS !== 'undefined') {
+        let path = '/' + filename;
+        FS.writeFile(path, "");
+        refreshSidebar();
+        openFileFromFS(path);
+      }
     }
 
-    function openFile() {
+    function uploadFile() {
       var input = document.createElement('input');
       input.type = 'file';
-      input.accept = '.py';
       input.onchange = function(e) {
         var file = e.target.files[0];
         var reader = new FileReader();
-        reader.onload = function(ev) { editor.setValue(ev.target.result); };
-        reader.readAsText(file);
+        reader.onload = function(ev) { 
+          let data = new Uint8Array(ev.target.result);
+          let path = '/' + file.name;
+          FS.writeFile(path, data);
+          term.writeln(`\x1b[1;32m> UPLOADED SCRIPT: ${path}\x1b[0m`);
+          refreshSidebar();
+          // Open if it's text
+          if (file.name.endsWith('.py') || file.name.endsWith('.txt')) {
+            openFileFromFS(path);
+          }
+        };
+        reader.readAsArrayBuffer(file);
       };
       input.click();
     }
 
     function saveFile() {
+      // Physical download to user's computer
       var blob = new Blob([editor.getValue()], { type: 'text/plain' });
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -431,8 +543,12 @@
     }
 
     function resetToDefault() {
-      editor.setValue(defaultCode);
+      editor.setValue(defaultCode, -1);
       localStorage.removeItem('editor-contents');
+      if (typeof FS !== 'undefined') {
+        FS.writeFile('/main.py', defaultCode);
+        openFileFromFS('/main.py');
+      }
     }
 
     function includeAssets() {
@@ -441,14 +557,16 @@
       input.multiple = true;
       input.onchange = function(e) {
         var files = Array.from(e.target.files);
+        try { FS.mkdir('/assets'); } catch(err) {} // Ensure assets folder exists
+        
         files.forEach(function(file) {
           var reader = new FileReader();
           reader.onload = function(ev) {
             var data = new Uint8Array(ev.target.result);
-            var path = '/assets/game_assets/' + file.name;
-
+            var path = '/assets/' + file.name;
             FS.writeFile(path, data);
-            console.log('Wrote ' + path + ' (' + data.length + ' bytes)');
+            term.writeln(`\x1b[1;32m> WRITTEN ASSET TO MEMFS: ${path} (${data.length} bytes)\x1b[0m`);
+            refreshSidebar();
           };
           reader.readAsArrayBuffer(file);
         });
@@ -459,17 +577,10 @@
     function toggleCanvasFullscreen() {
       var el = document.getElementById('canvas');
       if (!document.fullscreenElement) {
-        if (el.requestFullscreen) {
-          el.requestFullscreen();
-        } else if (el.webkitRequestFullscreen) { /* Safari */
-          el.webkitRequestFullscreen();
-        } else if (el.msRequestFullscreen) { /* IE11 */
-          el.msRequestFullscreen();
-        }
+        if (el.requestFullscreen) { el.requestFullscreen(); } 
+        else if (el.webkitRequestFullscreen) { el.webkitRequestFullscreen(); }
       } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        }
+        if (document.exitFullscreen) { document.exitFullscreen(); }
       }
     }
 
@@ -486,6 +597,40 @@
         document.querySelectorAll('.menu-btn').forEach(function(btn) {
           btn.classList.remove('open');
         });
+      }
+    });
+
+    let dropzone = document.getElementById('dropzone');
+
+    window.addEventListener('dragenter', e => { e.preventDefault(); dropzone.classList.add('active'); });
+    dropzone.addEventListener('dragover', e => e.preventDefault() );
+    dropzone.addEventListener('dragleave', e => { e.preventDefault(); dropzone.classList.remove('active'); });
+
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('active');
+      
+      if (typeof FS === 'undefined') {
+        term.writeln('\x1b[1;31m> SYSTEM ERROR: VFS NOT READY.\x1b[0m');
+        return;
+      }
+
+      for (let file of e.dataTransfer.files) {
+        let reader = new FileReader();
+        reader.onload = function(ev) {
+          let data = new Uint8Array(ev.target.result);
+          // Auto-route media to /assets and scripts to root
+          let path = file.name.match(/\.(png|jpg|jpeg|bam|ogg|wav)$/i) ? '/assets/' + file.name : '/' + file.name;
+          
+          if (path.startsWith('/assets')) { try { FS.mkdir('/assets'); } catch(err) {} }
+          
+          FS.writeFile(path, data);
+          term.writeln(`\x1b[1;32m> RECEIVED: ${path} (${data.length} BYTES)\x1b[0m`);
+          refreshSidebar();
+          
+          if (path.endsWith('.py') || path.endsWith('.txt')) openFileFromFS(path);
+        };
+        reader.readAsArrayBuffer(file);
       }
     });
   </script>
@@ -547,15 +692,14 @@
   </div>
 
   <div id="main-area">
+    <div id="dropzone" class="blinking-text">>>> DROP ASSETS HERE <<<</div>
     <div id="panel-sidebar">
       <div class="tree-title">SYS_DIR /</div>
-      <div class="file-item active">|-- main.py</div>
-      <div class="file-item">|-- config.py</div>
-      <div class="file-item">|-- models/</div>
-      <div class="file-item">&nbsp;&nbsp;|-- player.bam</div>
-      <div class="file-item">|-- textures/</div>
-      <div class="file-item">&nbsp;&nbsp;|-- map.png</div>
+      <div id="file-tree">
+        <div class="file-item" style="color: var(--fg-secondary);">AWAITING FS...</div>
+      </div>
     </div>
+    
     <div id="panel-output">
       <div id="main">
         <div id="overlay">
@@ -572,7 +716,6 @@
     <div id="panel-input">
       <div id="editor-tabs">
         <div class="tab active">main.py</div>
-        <div class="tab">config.py</div>
       </div>
       <div id="editor-container">
         <pre id="editor"></pre>
@@ -594,8 +737,18 @@
     editor.setTheme("ace/theme/terminal");
     editor.session.setMode("ace/mode/python");
     editor.setShowPrintMargin(false);
+    
+    // Auto-save typing into the Virtual File System
     editor.session.on('change', function() {
-      localStorage.setItem("editor-contents", editor.getValue());
+      let code = editor.getValue();
+      // Keep localstorage backup for main.py just in case of refresh
+      if (currentOpenFile === '/main.py') {
+        localStorage.setItem("editor-contents", code);
+      }
+      // Silently sync to Emscripten FS
+      if (typeof FS !== 'undefined') {
+        try { FS.writeFile(currentOpenFile, code); } catch(e) {}
+      }
     });
   </script>
 
@@ -659,6 +812,12 @@
         var overlay = document.getElementById("overlay");
         if (overlay) overlay.style.display = "none";
         term.writeln('\x1b[1;32mSYSTEM READY. WAITING FOR INPUT.\x1b[0m');
+
+        // Initialize Virtual File System with editor contents
+        let initialCode = localStorage.getItem("editor-contents") || defaultCode;
+        FS.writeFile('/main.py', initialCode);
+        refreshSidebar();
+        openFileFromFS('/main.py');
       }],
 
       // Reroute Emscripten outputs to Xterm.js
