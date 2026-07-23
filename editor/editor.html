@@ -511,6 +511,7 @@
       var runFunc = Module.cwrap('runPythonCode', 'number', ['string'], {async: true});
       // Always run whatever is currently in the active editor buffer
       runFunc(editor.getValue());
+    }
     
     function stopCode() {
       var stopFunc = Module.cwrap('stopPythonCode', 'number');
